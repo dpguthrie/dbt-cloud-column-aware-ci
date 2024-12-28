@@ -21,8 +21,15 @@ This results in faster CI runs and more efficient use of warehouse resources.
 ## Prerequisites
 
 - dbt Cloud Enterprise account
-- A `dbt docs generate` command should be run in at least one job in your environment that the CI job defers to.  More info [here](https://docs.getdbt.com/docs/collaborate/column-level-lineage#access-the-column-level-lineage).
-- GitHub Actions workflow
+- A `dbt docs generate` command should be run in at least one job in your environment that the CI job defers to.  This is what enables column-level lineage.  More info [here](https://docs.getdbt.com/docs/collaborate/column-level-lineage#access-the-column-level-lineage).
+- A dbt Cloud [Personal access token](https://docs.getdbt.com/docs/dbt-cloud-apis/user-tokens#create-a-personal-access-token)
+- A dbt Cloud [Service token](https://docs.getdbt.com/docs/dbt-cloud-apis/service-tokens) with the following permissions:
+
+| Permission | Usage | 
+|-------|-------------|
+| Metadata | Used to return column-level lineage and compiled code |
+| Job Runner | Used to trigger the CI job configured in the workflow |
+| Job Viewer | Used to infer the deferring environment ID if not given as part of the workflow inputs |
 
 ## Inputs
 
@@ -73,6 +80,12 @@ jobs:
    - Queries dbt Cloud's Discovery API to find impacted downstream models from the columns that had changes
 3. Creates a filtered CI run that excludes unaffected downstream models
 4. Monitors the job run and reports status back to GitHub
+
+## Caveats
+
+- Only been tested with Snowflake
+- Assumes that your column names are **not** case sensitive.
+- The dbt Cloud CLI is used to run dbt commands `compile` and `ls`, which means that it needs a personal access token and is at the moment scoped to a particular user.  The job itself that is triggered at the end of the workflow would still use the credentials configured for the enviroment it's running in.
 
 ## Contributing
 
