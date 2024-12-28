@@ -1,0 +1,22 @@
+[project]
+name = "dbt-cloud-column-aware-ci"
+version = "0.1.0"
+description = "A tool for running dbt Cloud CI jobs with column-level change awareness to optimize cost and performance during Continuous Integration."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "dbtc~=0.11",
+    "sqlglot~=26.0",
+    "pyyaml~=6.0",
+    "dbt",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "ruff>=0.6.2",
+    "pre-commit",    
+]
