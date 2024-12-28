@@ -186,7 +186,7 @@ class NodeManager:
         }
         """
         variables = {
-            "environmentId": self.environment_id,
+            "environmentId": self.config.dbt_cloud_environment_id,
             "nodeUniqueId": unique_id,
             # HACK - Snowflake returns column names as uppercase, so that's what we have
             "filters": {"columnName": column_name.upper()},
