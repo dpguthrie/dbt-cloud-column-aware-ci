@@ -118,6 +118,8 @@ class NodeManager:
             query, variables, paginated_request_to_list=True
         )
 
+        logger.info(f"Deferring env nodes:\n{deferring_env_nodes}")
+
         for deferring_env_node in deferring_env_nodes:
             unique_id = deferring_env_node["node"]["uniqueId"]
             if unique_id in self.node_unique_ids:
