@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Installing separately from its dependencies allows optimal layer caching
 ADD . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+    uv pip install .
 
 # Reset the entrypoint, don't invoke `uv`
 CMD ["python", "-m", "src.main"]
