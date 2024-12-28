@@ -130,6 +130,7 @@ class NodeManager:
         for deferring_env_node in deferring_env_nodes:
             unique_id = deferring_env_node["node"]["uniqueId"]
             if unique_id in self.node_unique_ids:
+                logger.info(f"Compiled source code found for `{unique_id}`")
                 self._node_dict[unique_id].source_code = deferring_env_node["node"][
                     "compiledCode"
                 ]
@@ -142,6 +143,11 @@ class NodeManager:
                 while True:
                     column = expression.find(Column)
                     if column is not None:
+                        logger.info(
+                            f"Column `{column.name}` in node `{node.unique_id}`"
+                            "has the following change: {change.__class__.__name__}.\n"
+                            "Finding downstream nodes using this column ..."
+                        )
                         impacted_unique_ids.update(
                             self._get_downstream_nodes_from_column(
                                 node.unique_id, column.name
