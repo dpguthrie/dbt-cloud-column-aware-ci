@@ -63,7 +63,7 @@ class NodeManager:
 
         logger.info("Compiling code for any modified nodes...")
 
-        _ = subprocess.run(cmd)
+        _ = subprocess.run(cmd, capture_output=True)
 
         # This will generate a run_results.json file, among other things, which will
         # contain the compiled code for each node
