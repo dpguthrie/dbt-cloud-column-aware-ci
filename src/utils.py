@@ -8,7 +8,7 @@ import re
 import yaml
 
 # first party
-from src.main import Config
+from src.config import Config
 
 
 class JobRunStatus(enum.IntEnum):
