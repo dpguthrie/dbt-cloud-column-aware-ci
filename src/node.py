@@ -118,6 +118,15 @@ class NodeManager:
             query, variables, paginated_request_to_list=True
         )
 
+        # Error handling
+        if deferring_env_nodes and "node" not in deferring_env_nodes[0]:
+            logger.error(
+                "Error encountered making request to discovery API."
+                f"Error message:\n{deferring_env_nodes[0]['message']}\n"
+                f"Full response:\n{deferring_env_nodes[0]}"
+            )
+            raise
+
         for deferring_env_node in deferring_env_nodes:
             unique_id = deferring_env_node["node"]["uniqueId"]
             if unique_id in self.node_unique_ids:
@@ -188,7 +197,7 @@ class NodeManager:
         variables = {
             "environmentId": self.config.dbt_cloud_environment_id,
             "nodeUniqueId": unique_id,
-            # HACK - Snowflake returns column names as uppercase, so that's what we have
+            # TODO - Snowflake returns column names as uppercase, so that's what we have
             "filters": {"columnName": column_name.upper()},
         }
         results = self.config.dbtc_client.metadata.query(query, variables)
