@@ -1,4 +1,4 @@
-name: "dbt Cloud Downstream CI Action"
+name: "dbt Cloud Column Aware CI"
 description: "This action will run dbt Cloud CI jobs taking into account downstream dependencies from projects set up with dbt Mesh"
 branding:
   icon: "cloud"
