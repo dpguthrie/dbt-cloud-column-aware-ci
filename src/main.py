@@ -1,5 +1,4 @@
 # stdlib
-import os
 import sys
 
 # first party
