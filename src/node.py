@@ -37,9 +37,7 @@ class Node:
 
 class NodeManager:
     def __init__(self, config: Config):
-        self._config = config
-        self.dbtc_client = self._config.dbtc_client
-        self.environment_id = self._config.dbt_cloud_environment_id
+        self.config = config
         self._node_dict: dict[str, Node] = {}
         self._all_unique_ids: set[str] = set()
         self._all_impacted_unique_ids: set[str] = set()
@@ -61,7 +59,7 @@ class NodeManager:
         self._node_dict = {k: v for k, v in self._node_dict.items() if v.source_code}
 
     def _get_target_code(self):
-        cmd = ["dbt", "compile", "-s", "state:modifie,resource_type:model"]
+        cmd = ["dbt", "compile", "-s", "state:modified,resource_type:model"]
 
         logger.info("Compiling code for any modified nodes...")
 
@@ -110,13 +108,13 @@ class NodeManager:
         variables = {
             "first": 500,
             "after": None,
-            "environmentId": self.dbt_cloud_environment_id,
+            "environmentId": self.config.dbt_cloud_environment_id,
             "filter": {"uniqueIds": self.node_unique_ids},
         }
 
         logger.info("Querying discovery API for compiled code...")
 
-        deferring_env_nodes = self.dbtc_client.metadata.query(
+        deferring_env_nodes = self.config.dbtc_client.metadata.query(
             query, variables, paginated_request_to_list=True
         )
 
@@ -193,7 +191,7 @@ class NodeManager:
             # HACK - Snowflake returns column names as uppercase, so that's what we have
             "filters": {"columnName": column_name.upper()},
         }
-        results = self.dbtc_client.metadata.query(query, variables)
+        results = self.config.dbtc_client.metadata.query(query, variables)
         try:
             lineage = results["data"]["column"]["lineage"]
         except Exception as e:
