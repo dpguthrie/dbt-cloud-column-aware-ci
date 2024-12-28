@@ -16,11 +16,14 @@ class Config:
     dbt_cloud_account_id: str = None
     dbt_cloud_job_id: str = None
     dbt_cloud_environment_id: str = None
+    dbt_cloud_service_token: str = None
     dbtc_client: dbtCloudClient = None
 
     def __post_init__(self):
         self._set_dbt_cloud_attributes()
-        self.dbtc_client = dbtCloudClient(host=self.dbt_cloud_host)
+        self.dbtc_client = dbtCloudClient(
+            service_token=self.dbt_cloud_service_token, host=self.dbt_cloud_host
+        )
         if not hasattr(self, "dbt_cloud_environment_id"):
             self._set_deferring_environment_id()
 
