@@ -144,7 +144,7 @@ class NodeManager:
                     column = expression.find(Column)
                     if column is not None:
                         logger.info(
-                            f"Column `{column.name}` in node `{node.unique_id}`"
+                            f"Column `{column.name}` in node `{node.unique_id}` "
                             f"has the following change: {change.__class__.__name__}.\n"
                             "Finding downstream nodes using this column ..."
                         )
