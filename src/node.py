@@ -41,6 +41,7 @@ class NodeManager:
         self._node_dict: dict[str, Node] = {}
         self._all_unique_ids: set[str] = set()
         self._all_impacted_unique_ids: set[str] = set()
+        self._node_column_set: set[str] = set()
         self.set_nodes()
 
     @property
@@ -143,16 +144,19 @@ class NodeManager:
                 while True:
                     column = expression.find(Column)
                     if column is not None:
-                        logger.info(
-                            f"Column `{column.name}` in node `{node.unique_id}` "
-                            f"has the following change: {change.__class__.__name__}.\n"
-                            "Finding downstream nodes using this column ..."
-                        )
-                        impacted_unique_ids.update(
-                            self._get_downstream_nodes_from_column(
-                                node.unique_id, column.name
+                        node_column = f"{node.unique_id}.{column.name}"
+                        if node_column not in self._node_column_set:
+                            logger.info(
+                                f"Column `{column.name}` in node `{node.unique_id}` "
+                                f"has the following change: {change.__class__.__name__}.\n"
+                                "Finding downstream nodes using this column ..."
                             )
-                        )
+                            impacted_unique_ids.update(
+                                self._get_downstream_nodes_from_column(
+                                    node.unique_id, column.name
+                                )
+                            )
+                            self._node_column_set.add(node_column)
                         break
                     elif expression.depth < 1:
                         break
