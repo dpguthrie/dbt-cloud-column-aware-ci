@@ -23,4 +23,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install -e .
 
 # Reset the entrypoint, don't invoke `uv`
-CMD ["python", "-m", "src.main"]
+ENTRYPOINT []
+
+CMD ["python", "-m", "app.src.main"]
