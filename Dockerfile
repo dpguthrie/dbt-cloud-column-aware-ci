@@ -19,10 +19,5 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Then, add the rest of the project source code and install it
 # Installing separately from its dependencies allows optimal layer caching
 ADD . /app
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install -e .
 
-# Reset the entrypoint, don't invoke `uv`
-ENTRYPOINT []
-
-CMD ["python", "-m", "app.src.main"]
+CMD ["python", "src/main.py"]
