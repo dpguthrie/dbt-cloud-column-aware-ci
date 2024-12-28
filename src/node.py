@@ -135,7 +135,7 @@ class NodeManager:
                     "compiledCode"
                 ]
 
-    def _get_impacted_unique_ids_for_node(self, node: Node):
+    def _get_impacted_unique_ids_for_node(self, node: Node) -> set[str]:
         impacted_unique_ids = set()
         for change in node.valid_changes:
             if hasattr(change, "expression"):
