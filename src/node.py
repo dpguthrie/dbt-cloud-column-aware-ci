@@ -118,8 +118,6 @@ class NodeManager:
             query, variables, paginated_request_to_list=True
         )
 
-        logger.info(f"Deferring env nodes:\n{deferring_env_nodes}")
-
         for deferring_env_node in deferring_env_nodes:
             unique_id = deferring_env_node["node"]["uniqueId"]
             if unique_id in self.node_unique_ids:
@@ -127,18 +125,18 @@ class NodeManager:
                     "compiledCode"
                 ]
 
-    def _get_impacted_unique_ids_for_node(
-        self, changes: list[Insert | Move | Remove | Update]
-    ):
+    def _get_impacted_unique_ids_for_node(self, node: Node):
         impacted_unique_ids = set()
-        for change in changes:
+        for change in node.valid_changes:
             if hasattr(change, "expression"):
                 expression = change.expression
                 while True:
                     column = expression.find(Column)
                     if column is not None:
                         impacted_unique_ids.update(
-                            self._get_downstream_nodes_from_column(column.name)
+                            self._get_downstream_nodes_from_column(
+                                node.unique_id, column.name
+                            )
                         )
                         break
                     elif expression.depth < 1:
@@ -175,7 +173,7 @@ class NodeManager:
                 continue
 
     def _get_downstream_nodes_from_column(
-        self, node: Node, column_name: str
+        self, unique_id: str, column_name: str
     ) -> set[str]:
         query = """
         query Column($environmentId: BigInt!, $nodeUniqueId: String!, $filters: ColumnLineageFilter) {
@@ -189,7 +187,7 @@ class NodeManager:
         """
         variables = {
             "environmentId": self.environment_id,
-            "nodeUniqueId": node.unique_id,
+            "nodeUniqueId": unique_id,
             # HACK - Snowflake returns column names as uppercase, so that's what we have
             "filters": {"columnName": column_name.upper()},
         }
@@ -199,7 +197,7 @@ class NodeManager:
         except Exception as e:
             logger.error(
                 f"Error occurred retrieving column lineage for {column_name}"
-                f"in {node.unique_id}:\n{e}"
+                f"in {unique_id}:\n{e}"
             )
             return set()
 
@@ -222,7 +220,7 @@ class NodeManager:
         for node in self.nodes:
             if node.valid_changes:
                 self._all_impacted_unique_ids.update(
-                    self._get_impacted_unique_ids_for_node(node.valid_changes)
+                    self._get_impacted_unique_ids_for_node(node)
                 )
 
         excluded_nodes = self._all_unique_ids - self._all_impacted_unique_ids
