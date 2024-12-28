@@ -7,7 +7,6 @@ dependencies = [
     "dbtc~=0.11",
     "sqlglot~=26.0",
     "pyyaml~=6.0",
-    "dbt",
 ]
 
 [build-system]
