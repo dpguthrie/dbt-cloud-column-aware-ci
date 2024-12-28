@@ -58,7 +58,7 @@ class NodeManager:
 
         self._node_dict = {k: v for k, v in self._node_dict.items() if v.source_code}
 
-    def _get_target_code(self):
+    def _get_target_code(self) -> None:
         cmd = ["dbt", "compile", "-s", "state:modified,resource_type:model"]
 
         logger.info("Compiling code for any modified nodes...")
