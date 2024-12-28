@@ -12,7 +12,7 @@ if __name__ == "__main__":
     create_dbt_cloud_profile(config)
     node_manager = NodeManager(config)
     excluded_nodes = node_manager.get_excluded_nodes()
-    run = trigger_job(config.dbtc_client, excluded_nodes=excluded_nodes)
+    run = trigger_job(config, excluded_nodes=excluded_nodes)
     try:
         run_status = run["status"]
     except Exception:
