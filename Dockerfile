@@ -20,4 +20,4 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Installing separately from its dependencies allows optimal layer caching
 ADD . /app
 
-CMD ["python", "src/main.py"]
+CMD ["python", "app/src/main.py"]
