@@ -10,19 +10,15 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
+# Copy setup instructions
 COPY pyproject.toml ./
 
-# Install dependencies
+# Install the project and its dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project --no-dev
+    uv pip install .
 
-# Copy the source code
+# Copy project files 
 COPY src/ ./src/
-
-# Install the project itself
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install -e .
 
 # Run the application
 CMD ["python", "-m", "src.main"]
