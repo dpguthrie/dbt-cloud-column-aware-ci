@@ -145,7 +145,7 @@ class NodeManager:
                     if column is not None:
                         logger.info(
                             f"Column `{column.name}` in node `{node.unique_id}`"
-                            "has the following change: {change.__class__.__name__}.\n"
+                            f"has the following change: {change.__class__.__name__}.\n"
                             "Finding downstream nodes using this column ..."
                         )
                         impacted_unique_ids.update(
