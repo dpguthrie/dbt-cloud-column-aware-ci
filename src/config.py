@@ -24,7 +24,7 @@ class Config:
         self.dbtc_client = dbtCloudClient(
             service_token=self.dbt_cloud_service_token, host=self.dbt_cloud_host
         )
-        if not hasattr(self, "dbt_cloud_environment_id"):
+        if self.dbt_cloud_environment_id is None:
             self._set_deferring_environment_id()
 
     def _set_dbt_cloud_attributes(self) -> None:
@@ -34,7 +34,7 @@ class Config:
                 value = os.environ[env_var]
                 setattr(self, name, value)
 
-    def _set_deferring_environment_id(self):
+    def _set_deferring_environment_id(self) -> None:
         try:
             ci_job = self.dbtc_client.cloud.get_job(
                 self.dbt_cloud_account_id, self.dbt_cloud_job_id
