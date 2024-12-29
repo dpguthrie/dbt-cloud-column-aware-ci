@@ -24,15 +24,32 @@ class Node:
     target_code: str
     source_code: str | None = None
 
+    def __post_init__(self):
+        self.diff = diff(parse_one(self.source_code), parse_one(self.target_code))
+
     @property
     def valid_changes(self):
         def is_valid_change(change: Insert | Move | Remove | Update) -> bool:
             return change.__class__ not in [Move]
 
-        source = parse_one(self.source_code)
-        target = parse_one(self.target_code)
-        changes = diff(source, target, delta_only=True)
-        return [change for change in changes if is_valid_change(change)]
+        return [change for change in self.diff if is_valid_change(change)]
+
+    @property
+    def column_changes(self) -> set[str]:
+        """Returns a set containing column names for all changed columns."""
+        changed_columns = set()
+        for change in self.valid_changes:
+            if hasattr(change, "expression"):
+                expression = change.expression
+                while True:
+                    column = expression.find(Column)
+                    if column is not None:
+                        changed_columns.add(column.name)
+                        break
+                    elif expression.depth < 1:
+                        break
+                    expression = expression.parent
+        return changed_columns
 
 
 class NodeManager:
@@ -42,7 +59,7 @@ class NodeManager:
         self._all_unique_ids: set[str] = set()
         self._all_impacted_unique_ids: set[str] = set()
         self._node_column_set: set[str] = set()
-        self.set_nodes()
+        self.set_node_dict()
 
     @property
     def node_unique_ids(self) -> list[str]:
@@ -52,14 +69,16 @@ class NodeManager:
     def nodes(self) -> list[Node]:
         return list(self._node_dict.values())
 
-    def set_nodes(self) -> None:
-        self._get_target_code()
-        if self.nodes:
-            self._get_source_code()
+    def set_node_dict(self) -> None:
+        modified_nodes = self._get_target_code()
+        if modified_nodes:
+            modified_nodes = self._get_source_code(modified_nodes)
 
-        self._node_dict = {k: v for k, v in self._node_dict.items() if v.source_code}
+        self._node_dict = {
+            k: Node(**v) for k, v in modified_nodes.items() if v.get("source_code")
+        }
 
-    def _get_target_code(self) -> None:
+    def _get_target_code(self) -> dict[str, dict[str, str]]:
         cmd = ["dbt", "compile", "-s", "state:modified,resource_type:model"]
 
         logger.info("Compiling code for any modified nodes...")
@@ -72,16 +91,22 @@ class NodeManager:
         with open("target/run_results.json") as rr:
             run_results_json = json.load(rr)
 
+        modified_nodes = {}
         for result in run_results_json.get("results", []):
             relation_name = result["relation_name"]
             if relation_name is not None:
                 unique_id = result["unique_id"]
-                self._node_dict[unique_id] = Node(
-                    unique_id=unique_id, target_code=result["compiled_code"]
-                )
+                modified_nodes[unique_id] = {
+                    "unique_id": unique_id,
+                    "target_code": result["compiled_code"],
+                }
                 logger.info(f"Retrieved compiled code for {unique_id}")
 
-    def _get_source_code(self) -> None:
+        return modified_nodes
+
+    def _get_source_code(
+        self, modified_nodes: dict[str, dict[str, str]]
+    ) -> dict[str, dict[str, str]]:
         query = """
         query Environment($environmentId: BigInt!, $filter: ModelAppliedFilter, $first: Int, $after: String) {
             environment(id: $environmentId) {
@@ -130,37 +155,28 @@ class NodeManager:
 
         for deferring_env_node in deferring_env_nodes:
             unique_id = deferring_env_node["node"]["uniqueId"]
-            if unique_id in self.node_unique_ids:
+            if unique_id in modified_nodes.keys():
                 logger.info(f"Compiled source code found for `{unique_id}`")
-                self._node_dict[unique_id].source_code = deferring_env_node["node"][
+                modified_nodes[unique_id]["source_code"] = deferring_env_node["node"][
                     "compiledCode"
                 ]
 
+        return modified_nodes
+
     def _get_impacted_unique_ids_for_node(self, node: Node) -> set[str]:
         impacted_unique_ids = set()
-        for change in node.valid_changes:
-            if hasattr(change, "expression"):
-                expression = change.expression
-                while True:
-                    column = expression.find(Column)
-                    if column is not None:
-                        node_column = f"{node.unique_id}.{column.name}"
-                        if node_column not in self._node_column_set:
-                            logger.info(
-                                f"Column `{column.name}` in node `{node.unique_id}` "
-                                f"has the following change: {change.__class__.__name__}.\n"
-                                "Finding downstream nodes using this column ..."
-                            )
-                            impacted_unique_ids.update(
-                                self._get_downstream_nodes_from_column(
-                                    node.unique_id, column.name
-                                )
-                            )
-                            self._node_column_set.add(node_column)
-                        break
-                    elif expression.depth < 1:
-                        break
-                    expression = expression.parent
+        for column_name in node.column_changes:
+            node_column = f"{node.unique_id}.{column_name}"
+            if node_column not in self._node_column_set:
+                logger.info(
+                    f"Column `{column_name}` in node `{node.unique_id}` "
+                    f"has a change.\n"
+                    "Finding downstream nodes using this column ..."
+                )
+                impacted_unique_ids.update(
+                    self._get_downstream_nodes_from_column(node.unique_id, column_name)
+                )
+                self._node_column_set.add(node_column)
 
         return impacted_unique_ids
 
