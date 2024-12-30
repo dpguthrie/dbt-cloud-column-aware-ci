@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class Node:
     unique_id: str
     target_code: str
-    source_code: str | None = None
+    source_code: str
 
     def __post_init__(self):
         self.diff = diff(parse_one(self.source_code), parse_one(self.target_code))
