@@ -25,7 +25,14 @@ class Node:
     source_code: str
 
     def __post_init__(self):
-        self.diff = diff(parse_one(self.source_code), parse_one(self.target_code))
+        try:
+            self.diff = diff(parse_one(self.source_code), parse_one(self.target_code))
+        except Exception as e:
+            logger.error(
+                f"There was a problem creating a diff for {self.unique_id}.\n"
+                f"Error: {e}\n\nSource: {self.source_code}\nTarget: {self.target_code}"
+            )
+            self.diff = []
 
     @property
     def valid_changes(self):
