@@ -353,9 +353,14 @@ class NodeManager:
             },
         }
         results = self.config.dbtc_client.metadata.query(query, variables)
-        return {
-            r["uniqueId"] for r in results["data"]["environment"]["applied"]["lineage"]
-        }
+        try:
+            return {
+                r["uniqueId"]
+                for r in results["data"]["environment"]["applied"]["lineage"]
+            }
+        except Exception as e:
+            logger.error(f"Error occurred retrieving lineage for {names_str}:\n{e}")
+            return set()
 
     def _get_downstream_nodes_from_column(
         self, unique_id: str, column_name: str
