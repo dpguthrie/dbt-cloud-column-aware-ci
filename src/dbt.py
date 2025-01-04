@@ -85,3 +85,5 @@ def get_all_unique_ids(
 
         except ValueError:
             continue
+
+    return all_unique_ids
