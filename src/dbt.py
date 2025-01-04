@@ -64,6 +64,7 @@ def get_source_compiled_code(
         unique_id = deferring_env_node["node"]["uniqueId"]
         compiled_code = deferring_env_node["node"]["compiledCode"]
         modified_nodes[unique_id] = {"source_code": compiled_code}
+        logger.info(f"Compiled code found for `{unique_id}`")
 
     return modified_nodes
 

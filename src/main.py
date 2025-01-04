@@ -77,6 +77,7 @@ if __name__ == "__main__":
 
     else:
         # Get all affected nodes, including downstream, by running dbt ls
+        logger.info("Running dbt command `dbt ls` to find all affected nodes...")
         result = subprocess.run(DBT_COMMANDS["ls"], capture_output=True, text=True)
         all_unique_ids = get_all_unique_ids(result, list(target_nodes.keys()))
 

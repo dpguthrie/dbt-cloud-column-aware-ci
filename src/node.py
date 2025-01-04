@@ -194,6 +194,10 @@ class NodeManager:
 
         # Column level changes
         for column_name in node.column_changes:
+            logger.info(
+                f"Finding downstream nodes for `{node.unique_id}` and column `"
+                f"{column_name}`"
+            )
             node_column = f"{node.unique_id}.{column_name}"
             if node_column not in self._node_column_set:
                 logger.info(
