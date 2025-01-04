@@ -261,12 +261,13 @@ class NodeManager:
 
         if downstream_nodes:
             logger.info(
-                f"Column `{column_name}` is being used by the following downstream "
-                f"nodes: `{', '.join(downstream_nodes)}"
+                f"Column `{column_name}` in node `{unique_id}` is being used by the "
+                f"following downstream nodes: `{', '.join(downstream_nodes)}"
             )
         else:
             logger.info(
-                f"Column `{column_name}` is NOT being used anywhere downstream."
+                f"Column `{column_name}` in node `{unique_id}` is NOT being used "
+                "anywhere downstream."
             )
 
         return downstream_nodes
