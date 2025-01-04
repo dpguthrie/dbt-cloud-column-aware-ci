@@ -194,16 +194,11 @@ class NodeManager:
 
         # Column level changes
         for column_name in node.column_changes:
-            logger.info(
-                f"Finding downstream nodes for `{node.unique_id}` and column `"
-                f"{column_name}`"
-            )
             node_column = f"{node.unique_id}.{column_name}"
             if node_column not in self._node_column_set:
                 logger.info(
                     f"Column `{column_name}` in node `{node.unique_id}` "
-                    f"has a change.\n"
-                    "Finding downstream nodes using this column ..."
+                    f"has a change.  Finding downstream nodes using this column ..."
                 )
                 impacted_unique_ids.update(
                     self._get_downstream_nodes_from_column(node.unique_id, column_name)
@@ -263,6 +258,16 @@ class NodeManager:
         for node in lineage:
             if node["relationship"] == "child":
                 downstream_nodes.add(node["nodeUniqueId"])
+
+        if downstream_nodes:
+            logger.info(
+                f"Column `{column_name}` is being used by the following downstream "
+                f"nodes: `{', '.join(downstream_nodes)}"
+            )
+        else:
+            logger.info(
+                f"Column `{column_name}` is NOT being used anywhere downstream."
+            )
 
         return downstream_nodes
 
