@@ -277,10 +277,12 @@ class NodeManager:
 
         # Node level changes
         nodes = [node for node in self.nodes if not node.ignore_column_changes]
-
-        logger.info("Some nodes were found to have node level breaking changes...")
-        logger.info(f"Nodes: {', '.join(nodes)}")
         if nodes:
+            logger.info("Some nodes were found to have node level breaking changes...")
+            logger.info(f"Nodes: {', '.join([n.unique_id for n in nodes])}")
+            logger.info(
+                f"Breaking changes: {'\n'.join([n.breaking_changes for n in nodes])}"
+            )
             self._all_impacted_unique_ids.update(
                 self._get_impacted_unique_ids_for_nodes(nodes)
             )
