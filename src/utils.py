@@ -69,7 +69,7 @@ def trigger_job(config: Config, *, excluded_nodes: list[str] = None) -> dict:
         "github_pull_request_id": pull_request_id,
     }
 
-    if excluded_nodes is not None:
+    if excluded_nodes:
         excluded_nodes_str = " ".join(excluded_nodes)
         steps_override = [
             f"dbt build -s state:modified+ --exclude {excluded_nodes_str}"

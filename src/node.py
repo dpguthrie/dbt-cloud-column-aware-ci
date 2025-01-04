@@ -269,15 +269,6 @@ class NodeManager:
         if not self.all_unique_ids:
             return list()
 
-        # TODO: DELETE logging
-        for node in self.nodes:
-            logger.info(f"Node: {node.unique_id}")
-            logger.info(f"-- column changes {node.column_changes}")
-            logger.info(f" -- ignore column changes {node.ignore_column_changes}")
-            for bc in node.breaking_changes:
-                logger.info(f"Breaking change: {bc._expr}")
-                logger.info(f"-- column name: {bc.column_name}")
-
         # Column level changes
         for node in self.nodes:
             if node.column_changes:
