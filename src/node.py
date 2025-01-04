@@ -55,7 +55,6 @@ class BreakingChange:
             self._expr = self.edit.expression
         except AttributeError:
             self._expr = self.edit.source
-        logger.info(f"Expression:\n{self.expr}")
 
     def _in_cte(self, expr: exp.Expression):
         return expr.find_ancestor(exp.CTE) is not None
@@ -136,6 +135,11 @@ class Node:
 
         # All breaking changes from diff
         self.breaking_changes = self._get_breaking_changes()
+
+        # TODO: DELETE logging
+        for bc in self.breaking_changes:
+            logger.info(f"Breaking change: {bc._expr}")
+            logger.info(f"-- column name: {bc.column_name}")
 
         # We should ignore column level changes if there are any node level changes
         self.ignore_column_changes = any(
