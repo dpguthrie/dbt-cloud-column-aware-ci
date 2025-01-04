@@ -10,6 +10,7 @@ from sqlglot.optimizer.scope import Scope, build_scope, find_all_in_scope
 
 # first party
 from src.config import Config
+from src.discovery_api_queries import QUERIES
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -208,16 +209,6 @@ class NodeManager:
         return impacted_unique_ids
 
     def _get_impacted_unique_ids_for_nodes(self, nodes: list[Node]) -> set[str]:
-        query = """
-        query Environment($environmentId: BigInt!, $filter: LineageFilter!) {
-            environment(id: $environmentId) {
-                applied {
-            lineage(filter: $filter) {
-                uniqueId
-            }
-            }
-        }
-        """
         names = [node.unique_id.split(".")[-1] for node in nodes]
         names_str = "+ ".join(names) + "+"
         variables = {
@@ -229,37 +220,31 @@ class NodeManager:
                 "types": ["Model"],
             },
         }
-        results = self.config.dbtc_client.metadata.query(query, variables)
+        results = self.config.dbtc_client.metadata.query(
+            QUERIES["node_lineage"], variables
+        )
         try:
             return {
                 r["uniqueId"]
                 for r in results["data"]["environment"]["applied"]["lineage"]
             }
-        except Exception as e:
-            logger.error(f"Error occurred retrieving lineage for {names_str}:\n{e}")
+        except Exception:
+            logger.error(f"Error occurred retrieving lineage for {names_str}")
             logger.error(f"Response:\n{results}")
             return set()
 
     def _get_downstream_nodes_from_column(
         self, unique_id: str, column_name: str
     ) -> set[str]:
-        query = """
-        query Column($environmentId: BigInt!, $nodeUniqueId: String!, $filters: ColumnLineageFilter) {
-            column(environmentId: $environmentId) {
-                lineage(nodeUniqueId: $nodeUniqueId, filters: $filters) {
-                    nodeUniqueId
-                    relationship
-                }
-            }
-        }
-        """
         variables = {
             "environmentId": self.config.dbt_cloud_environment_id,
             "nodeUniqueId": unique_id,
             # TODO - Snowflake returns column names as uppercase, so that's what we have
             "filters": {"columnName": column_name.upper()},
         }
-        results = self.config.dbtc_client.metadata.query(query, variables)
+        results = self.config.dbtc_client.metadata.query(
+            QUERIES["column_lineage"], variables
+        )
         try:
             lineage = results["data"]["column"]["lineage"]
         except Exception as e:
