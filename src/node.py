@@ -277,7 +277,7 @@ class NodeManager:
         for node in self.nodes:
             if node.column_changes:
                 self._all_impacted_unique_ids.update(
-                    self._get_impacted_unique_ids_for_node_column(node)
+                    self._get_impacted_unique_ids_for_node_columns(node)
                 )
 
         # Node level changes
