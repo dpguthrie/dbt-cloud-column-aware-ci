@@ -1,7 +1,5 @@
 # stdlib
-import json
 import logging
-import subprocess
 import typing as t
 from dataclasses import dataclass
 
@@ -168,13 +166,19 @@ class Node:
 
 
 class NodeManager:
-    def __init__(self, config: Config):
+    def __init__(
+        self,
+        config: Config,
+        all_nodes: dict[str, dict[str, str]],
+        all_unique_ids: set[str],
+    ):
         self.config = config
-        self._node_dict: dict[str, Node] = {}
-        self._all_unique_ids: set[str] = set()
+        self._node_dict = {
+            k: Node(**v) for k, v in all_nodes.items() if v.get("source_code")
+        }
+        self.all_unique_ids = all_unique_ids
         self._all_impacted_unique_ids: set[str] = set()
         self._node_column_set: set[str] = set()
-        self.set_node_dict()
 
     @property
     def node_unique_ids(self) -> list[str]:
@@ -183,106 +187,6 @@ class NodeManager:
     @property
     def nodes(self) -> list[Node]:
         return list(self._node_dict.values())
-
-    def set_node_dict(self) -> None:
-        modified_nodes = self._get_target_code()
-        if modified_nodes:
-            modified_nodes = self._get_source_code(modified_nodes)
-
-        self._node_dict = {
-            k: Node(**v) for k, v in modified_nodes.items() if v.get("source_code")
-        }
-
-    def _get_target_code(self) -> dict[str, dict[str, str]]:
-        cmd = [
-            "dbt",
-            "compile",
-            "-s",
-            "state:modified,resource_type:model",
-            "--favor-state",
-        ]
-
-        logger.info("Compiling code for any modified nodes...")
-
-        _ = subprocess.run(cmd, capture_output=True)
-
-        # This will generate a run_results.json file, among other things, which will
-        # contain the compiled code for each node
-
-        with open("target/run_results.json") as rr:
-            run_results_json = json.load(rr)
-
-        modified_nodes = {}
-        for result in run_results_json.get("results", []):
-            relation_name = result["relation_name"]
-            if relation_name is not None:
-                unique_id = result["unique_id"]
-                modified_nodes[unique_id] = {
-                    "unique_id": unique_id,
-                    "target_code": result["compiled_code"],
-                }
-                logger.info(f"Retrieved compiled code for {unique_id}")
-
-        return modified_nodes
-
-    def _get_source_code(
-        self, modified_nodes: dict[str, dict[str, str]]
-    ) -> dict[str, dict[str, str]]:
-        query = """
-        query Environment($environmentId: BigInt!, $filter: ModelAppliedFilter, $first: Int, $after: String) {
-            environment(id: $environmentId) {
-                applied {
-                    models(filter: $filter, first: $first, after: $after) {
-                        edges {
-                            node {
-                                compiledCode
-                                uniqueId
-                            }
-                        }
-                        pageInfo {
-                            endCursor
-                            hasNextPage
-                            hasPreviousPage
-                            startCursor
-                        }
-                        totalCount
-                    }
-                }
-            }
-        }
-        """
-
-        variables = {
-            "first": 500,
-            "after": None,
-            "environmentId": self.config.dbt_cloud_environment_id,
-            "filter": {"uniqueIds": self.node_unique_ids},
-        }
-
-        logger.info("Querying discovery API for compiled code...")
-
-        deferring_env_nodes = self.config.dbtc_client.metadata.query(
-            query, variables, paginated_request_to_list=True
-        )
-
-        # Error handling
-        if deferring_env_nodes and "node" not in deferring_env_nodes[0]:
-            logger.error(
-                "Error encountered making request to discovery API."
-                f"Error message:\n{deferring_env_nodes[0]['message']}\n"
-                f"Full response:\n{deferring_env_nodes[0]}"
-            )
-            raise
-
-        for deferring_env_node in deferring_env_nodes:
-            unique_id = deferring_env_node["node"]["uniqueId"]
-            if unique_id in modified_nodes.keys():
-                logger.info(f"Compiled source code found for `{unique_id}`")
-                modified_nodes[unique_id]["source_code"] = deferring_env_node["node"][
-                    "compiledCode"
-                ]
-
-        return modified_nodes
 
     def _get_impacted_unique_ids_for_node_columns(self, node: Node) -> set[str]:
         impacted_unique_ids = set()
@@ -302,33 +206,6 @@ class NodeManager:
                 self._node_column_set.add(node_column)
 
         return impacted_unique_ids
-
-    def _get_all_unique_ids(self) -> set[str]:
-        """Get all downstream unique IDs using dbt ls"""
-        cmd = [
-            "dbt",
-            "ls",
-            "--resource-type",
-            "model",
-            "--select",
-            "state:modified+",
-            "--output",
-            "json",
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-
-        self._all_unique_ids = set()
-        for line in result.stdout.split("\n"):
-            json_str = line[line.find("{") : line.rfind("}") + 1]
-            try:
-                data = json.loads(json_str)
-                unique_id = data["unique_id"]
-
-                # Only include if it's a downstream node
-                if unique_id not in self.node_unique_ids:
-                    self._all_unique_ids.add(data["unique_id"])
-            except ValueError:
-                continue
 
     def _get_impacted_unique_ids_for_nodes(self, nodes: list[Node]) -> set[str]:
         query = """
@@ -360,6 +237,7 @@ class NodeManager:
             }
         except Exception as e:
             logger.error(f"Error occurred retrieving lineage for {names_str}:\n{e}")
+            logger.error(f"Response:\n{results}")
             return set()
 
     def _get_downstream_nodes_from_column(
@@ -402,9 +280,7 @@ class NodeManager:
         if not self.nodes:
             return list()
 
-        self._get_all_unique_ids()
-
-        if not self._all_unique_ids:
+        if not self.all_unique_ids:
             return list()
 
         # Column level changes
@@ -421,5 +297,5 @@ class NodeManager:
                 self._get_impacted_unique_ids_for_nodes(nodes)
             )
 
-        excluded_nodes = self._all_unique_ids - self._all_impacted_unique_ids
+        excluded_nodes = self.all_unique_ids - self._all_impacted_unique_ids
         return [em.split(".")[-1] for em in excluded_nodes]
