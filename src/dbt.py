@@ -69,7 +69,7 @@ def get_source_compiled_code(
 
 
 def get_all_unique_ids(
-    result: CompletedProcess, modified_unique_ids: list[str] = None
+    result: CompletedProcess, modified_unique_ids: list[str]
 ) -> set[str]:
     """Get all unique IDs, including downstream, affected by the PR."""
     all_unique_ids = set()
@@ -80,7 +80,7 @@ def get_all_unique_ids(
             unique_id = data["unique_id"]
 
             # Only include if it's a downstream node
-            if unique_id not in modified_unique_ids or []:
+            if unique_id not in modified_unique_ids:
                 all_unique_ids.add(data["unique_id"])
 
         except ValueError:
