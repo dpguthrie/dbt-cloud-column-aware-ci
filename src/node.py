@@ -228,6 +228,7 @@ class NodeManager:
         results = self.config.dbtc_client.metadata.query(
             QUERIES["node_lineage"], variables
         )
+        logger.info(f"Results:\n{results}")
         try:
             return {
                 r["uniqueId"]
