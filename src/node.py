@@ -55,6 +55,7 @@ class BreakingChange:
             self._expr = self.edit.expression
         except AttributeError:
             self._expr = self.edit.source
+        logger.info(f"Expression:\n{self.expr}")
 
     def _in_cte(self, expr: exp.Expression):
         return expr.find_ancestor(exp.CTE) is not None
@@ -280,9 +281,6 @@ class NodeManager:
         if nodes:
             logger.info("Some nodes were found to have node level breaking changes...")
             logger.info(f"Nodes: {', '.join([n.unique_id for n in nodes])}")
-            logger.info(
-                f"Breaking changes: {'\n'.join([n.breaking_changes for n in nodes])}"
-            )
             self._all_impacted_unique_ids.update(
                 self._get_impacted_unique_ids_for_nodes(nodes)
             )
