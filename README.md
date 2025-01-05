@@ -81,11 +81,17 @@ jobs:
 3. Creates a filtered CI run that excludes unaffected downstream models
 4. Monitors the job run and reports status back to GitHub
 
+![Example of flow](./assets/column_aware_ci_flow.png)
+
 ## Caveats
 
 - Only been tested with Snowflake
 - Assumes that your column names are **not** case sensitive.
 - The dbt Cloud CLI is used to run dbt commands `compile` and `ls`, which means that it needs a personal access token and is at the moment scoped to a particular user.  The job itself that is triggered at the end of the workflow would still use the credentials configured for the enviroment it's running in.
+- The `favor-state` flag is used when compiling the target SQL.  This is done to try and minimize any changes that are picked up solely because of environment separation (e.g. db.my_dev_schema.dim_customers vs. db.my_prod_schema.dim_customers).  However, this doesn’t apply if the node is also part of the selected nodes.  See example below when running `dbt compile -s state:modified --favor-state`:
+
+![Example of favor-state flag](./assets/favor_state.png)
+
 
 ## Contributing
 
