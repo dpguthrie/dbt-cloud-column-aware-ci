@@ -13,6 +13,27 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+DBT_COMMANDS: dict[str, list[str]] = {
+    "compile": [
+        "dbt",
+        "compile",
+        "-s",
+        "state:modified,resource_type:model",
+        "--favor-state",
+    ],
+    "ls": [
+        "dbt",
+        "ls",
+        "--resource-type",
+        "model",
+        "--select",
+        "state:modified+",
+        "--output",
+        "json",
+    ],
+}
+
+
 def get_target_compiled_code() -> dict[str, dict[str, str]]:
     logger.info("Parsing run_results for compiled code...")
 
