@@ -102,6 +102,7 @@ class DbtRunner(DbtRunnerProtocol):
                     "target_code": result["compiled_code"],
                 }
                 logger.info(f"Retrieved compiled code for {unique_id}")
+                logger.info(f"Compiled code:\n{result['compiled_code']}")
 
         return modified_nodes
 
