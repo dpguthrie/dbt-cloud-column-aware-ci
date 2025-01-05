@@ -6,6 +6,7 @@ import sys
 # first party
 from src.config import Config
 from src.dbt import (
+    DBT_COMMANDS,
     get_all_unique_ids,
     get_source_compiled_code,
     get_target_compiled_code,
@@ -19,30 +20,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-DBT_COMMANDS: dict[str, list[str]] = {
-    "compile": [
-        "dbt",
-        "compile",
-        "-s",
-        "state:modified,resource_type:model",
-        "--favor-state",
-    ],
-    "ls": [
-        "dbt",
-        "ls",
-        "--resource-type",
-        "model",
-        "--select",
-        "state:modified+",
-        "--output",
-        "json",
-    ],
-}
-
-
 if __name__ == "__main__":
     # Instance contains all required information to execute commands, make requests, etc
-    config = Config()
+    config = Config.from_env()
 
     # Profile allows us to run dbt commands
     create_dbt_cloud_profile(config)
