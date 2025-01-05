@@ -130,6 +130,7 @@ class DbtRunner(DbtRunnerProtocol):
         logger.info("Running dbt command `dbt ls` to find all affected nodes...")
         result = subprocess.run(self.DBT_COMMANDS["ls"], capture_output=True, text=True)
 
+        logger.info(f"Result from `dbt ls`: {result.stdout.split('\n')}")
         if result.returncode != 0:
             logger.error(f"Error listing models: {result.stderr}")
             return set()

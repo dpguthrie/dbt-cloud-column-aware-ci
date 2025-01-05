@@ -171,7 +171,6 @@ class NodeManager:
         Returns:
             list[str]: List of node names that can be excluded
         """
-        logger.info("finding excluded nodes...")
         if not self.nodes:
             return list()
 
