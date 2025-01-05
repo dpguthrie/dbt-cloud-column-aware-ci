@@ -13,7 +13,6 @@ from sqlglot.diff import Insert
 # first party
 from src.config import Config
 from src.models.breaking_change import BreakingChange
-from src.models.column_tracker import ColumnTracker
 
 if TYPE_CHECKING:
     from src.models.column_tracker import ColumnTracker
@@ -172,6 +171,7 @@ class NodeManager:
         Returns:
             list[str]: List of node names that can be excluded
         """
+        logger.info("finding excluded nodes...")
         if not self.nodes:
             return list()
 
