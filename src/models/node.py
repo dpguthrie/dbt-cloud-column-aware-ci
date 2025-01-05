@@ -194,6 +194,10 @@ class NodeManager:
                 self._lineage_service.get_node_lineage(nodes)
             )
 
+        logger.info(f"All unique ids: {', '.join(self.all_unique_ids)}")
+        logger.info(
+            f"All impacted unique ids: {', '.join(self._all_impacted_unique_ids)}"
+        )
+
         excluded_nodes = self.all_unique_ids - self._all_impacted_unique_ids
-        return [em.split(".")[-1] for em in excluded_nodes]
         return [em.split(".")[-1] for em in excluded_nodes]
