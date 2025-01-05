@@ -43,22 +43,40 @@ class DiscoveryClient(DiscoveryClientProtocol):
             List[Dict[str, str]]: List of dictionaries containing lineage information
                                 Each dictionary contains 'nodeUniqueId' and 'relationship'
         """
-        variables = {
-            "environmentId": environment_id,
-            "nodeUniqueId": node_id,
-            "filters": {"columnName": column_name.upper()},
-        }
-
-        results = self.config.dbtc_client.metadata.query(
-            QUERIES["column_lineage"], variables
+        logger.debug(
+            "Fetching column lineage",
+            extra={
+                "environment_id": environment_id,
+                "node_id": node_id,
+                "column_name": column_name,
+            },
         )
 
         try:
-            return results["data"]["column"]["lineage"]
+            variables = {
+                "environmentId": environment_id,
+                "nodeUniqueId": node_id,
+                "filters": {"columnName": column_name.upper()},
+            }
+
+            lineage = self.config.dbtc_client.metadata.query(
+                QUERIES["column_lineage"], variables
+            )["data"]["column"]["lineage"]
+
+            logger.info(
+                "Retrieved column lineage",
+                extra={
+                    "node_id": node_id,
+                    "column_name": column_name,
+                    "lineage_count": len(lineage),
+                },
+            )
+            return lineage
+
         except Exception as e:
             logger.error(
-                f"Error occurred retrieving column lineage for {column_name} "
-                f"in {node_id}:\n{e}"
+                "Failed to get column lineage",
+                extra={"node_id": node_id, "column_name": column_name, "error": str(e)},
             )
             return []
 
@@ -76,29 +94,44 @@ class DiscoveryClient(DiscoveryClientProtocol):
         Returns:
             Set[str]: Set of unique IDs for all downstream dependent nodes
         """
-        names_str = "+ ".join(node_names) + "+"
-        variables = {
-            "environmentId": environment_id,
-            "filter": {
-                "select": f"--select {names_str}",
-                "exclude": f"--exclude {' '.join(node_names)}",
-                "types": ["Model"],
-            },
-        }
-
-        results = self.config.dbtc_client.metadata.query(
-            QUERIES["node_lineage"], variables
+        logger.debug(
+            "Fetching node lineage",
+            extra={"environment_id": environment_id, "node_count": len(node_names)},
         )
-        logger.info(f"Results:\n{results}")
 
         try:
-            return {
+            names_str = "+ ".join(node_names) + "+"
+            variables = {
+                "environmentId": environment_id,
+                "filter": {
+                    "select": f"--select {names_str}",
+                    "exclude": f"--exclude {' '.join(node_names)}",
+                    "types": ["Model"],
+                },
+            }
+
+            results = self.config.dbtc_client.metadata.query(
+                QUERIES["node_lineage"], variables
+            )
+            lineage = {
                 r["uniqueId"]
                 for r in results["data"]["environment"]["applied"]["lineage"]
             }
-        except Exception:
-            logger.error(f"Error occurred retrieving lineage for {names_str}")
-            logger.error(f"Response:\n{results}")
+
+            logger.info(
+                "Retrieved node lineage",
+                extra={
+                    "source_node_count": len(node_names),
+                    "downstream_node_count": len(lineage),
+                },
+            )
+            return lineage
+
+        except Exception as e:
+            logger.error(
+                "Failed to get node lineage",
+                extra={"node_names": node_names, "error": str(e)},
+            )
             return set()
 
     def get_compiled_code(
@@ -118,30 +151,49 @@ class DiscoveryClient(DiscoveryClientProtocol):
             Dict[str, Dict[str, str]]: Dictionary mapping node IDs to their properties,
                                      including compiled code
         """
-        variables = {
-            "first": 500,
-            "after": None,
-            "environmentId": environment_id,
-            "filter": {"uniqueIds": unique_ids},
-        }
-
-        nodes = self.config.dbtc_client.metadata.query(
-            QUERIES["compiled_code"], variables, paginated_request_to_list=True
+        logger.debug(
+            "Fetching compiled code",
+            extra={"environment_id": environment_id, "node_count": len(unique_ids)},
         )
 
-        if nodes and "node" not in nodes[0]:
+        try:
+            variables = {
+                "first": 500,
+                "after": None,
+                "environmentId": environment_id,
+                "filter": {"uniqueIds": unique_ids},
+            }
+
+            nodes = self.config.dbtc_client.metadata.query(
+                QUERIES["compiled_code"], variables, paginated_request_to_list=True
+            )
+
+            if nodes and "node" not in nodes[0]:
+                logger.error(
+                    "Failed to retrieve compiled code",
+                    extra={"error_message": nodes[0].get("message", "Unknown error")},
+                )
+                return {}
+
+            compiled_nodes = {}
+            for node in nodes:
+                unique_id = node["node"]["uniqueId"]
+                compiled_nodes[unique_id] = {
+                    "source_code": node["node"]["compiledCode"]
+                }
+
+            logger.info(
+                "Retrieved compiled code",
+                extra={
+                    "requested_count": len(unique_ids),
+                    "retrieved_count": len(compiled_nodes),
+                },
+            )
+            return compiled_nodes
+
+        except Exception as e:
             logger.error(
-                "Error encountered making request to discovery API.\n"
-                f"Error message:\n{nodes[0]['message']}\n"
-                f"Full response:\n{nodes[0]}"
+                "Failed to get compiled code",
+                extra={"unique_ids": unique_ids, "error": str(e)},
             )
             return {}
-
-        compiled_nodes: Dict[str, Dict[str, str]] = {}
-        for node in nodes:
-            unique_id = node["node"]["uniqueId"]
-            compiled_code = node["node"]["compiledCode"]
-            compiled_nodes[unique_id] = {"source_code": compiled_code}
-            logger.info(f"Compiled code found for `{unique_id}`")
-
-        return compiled_nodes

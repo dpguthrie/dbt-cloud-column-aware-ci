@@ -29,7 +29,25 @@ class NodeFactory:
             Dict[str, Node]: Dictionary mapping node IDs to their corresponding
                             Node instances
         """
-        return {k: Node(**v) for k, v in all_nodes.items() if v.get("source_code")}
+        logger.debug(
+            "Creating node instances",
+            extra={
+                "input_node_count": len(all_nodes),
+                "input_node_names": list(all_nodes.keys()),
+            },
+        )
+
+        nodes = {k: Node(**v) for k, v in all_nodes.items() if v.get("source_code")}
+
+        logger.info(
+            "Created node instances",
+            extra={
+                "created_node_count": len(nodes),
+                "created_node_names": list(nodes.keys()),
+                "skipped_node_names": list(set(all_nodes.keys()) - set(nodes.keys())),
+            },
+        )
+        return nodes
 
     @staticmethod
     def get_node_names(nodes: List[Node]) -> List[str]:
@@ -42,4 +60,9 @@ class NodeFactory:
         Returns:
             List[str]: List of node names extracted from their unique IDs
         """
-        return [node.unique_id.split(".")[-1] for node in nodes]
+        logger.debug("Extracting node names", extra={"node_count": len(nodes)})
+
+        names = [node.unique_id.split(".")[-1] for node in nodes]
+
+        logger.debug("Extracted node names", extra={"name_count": len(names)})
+        return names

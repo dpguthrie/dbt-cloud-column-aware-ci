@@ -66,11 +66,25 @@ class DbtRunner(DbtRunnerProtocol):
         Raises:
             RuntimeError: If the dbt compile command fails
         """
-        logger.info("Compiling code for any modified nodes...")
-        result = subprocess.run(self.DBT_COMMANDS["compile"], capture_output=True)
+        logger.debug(
+            "Compiling modified models",
+            extra={"command": " ".join(self.DBT_COMMANDS["compile"])},
+        )
+
+        result = subprocess.run(
+            self.DBT_COMMANDS["compile"],
+            capture_output=True,
+            text=True,
+        )
+
         if result.returncode != 0:
-            logger.error(f"Error compiling models: {result.stderr.decode()}")
+            logger.error(
+                "Failed to compile models",
+                extra={"return_code": result.returncode, "stderr": result.stderr},
+            )
             raise RuntimeError("Failed to compile models")
+
+        logger.info("Successfully compiled modified models")
 
     def get_target_compiled_code(self) -> Dict[str, Dict[str, str]]:
         """
@@ -83,28 +97,34 @@ class DbtRunner(DbtRunnerProtocol):
             Dict[str, Dict[str, str]]: Dictionary mapping node IDs to their
                                       properties, including compiled code
         """
-        logger.info("Parsing run_results for compiled code...")
+        logger.debug("Reading run_results.json for compiled code")
 
         try:
             with open("target/run_results.json") as rr:
                 run_results_json = json.load(rr)
+
+            modified_nodes = {}
+            for result in run_results_json.get("results", []):
+                relation_name = result.get("relation_name")
+                if relation_name is not None:
+                    unique_id = result["unique_id"]
+                    modified_nodes[unique_id] = {
+                        "unique_id": unique_id,
+                        "target_code": result["compiled_code"],
+                    }
+
+            logger.info(
+                "Retrieved target compiled code",
+                extra={"node_count": len(modified_nodes)},
+            )
+            return modified_nodes
+
         except FileNotFoundError:
-            logger.error("No run_results.json found. Did compilation succeed?")
+            logger.error("run_results.json not found")
             return {}
-
-        modified_nodes: Dict[str, Dict[str, str]] = {}
-        for result in run_results_json.get("results", []):
-            relation_name = result.get("relation_name")
-            if relation_name is not None:
-                unique_id = result["unique_id"]
-                modified_nodes[unique_id] = {
-                    "unique_id": unique_id,
-                    "target_code": result["compiled_code"],
-                }
-                logger.info(f"Retrieved compiled code for {unique_id}")
-                logger.info(f"Compiled code:\n{result['compiled_code']}")
-
-        return modified_nodes
+        except json.JSONDecodeError as e:
+            logger.error("Failed to parse run_results.json", extra={"error": str(e)})
+            return {}
 
     def get_source_compiled_code(
         self, unique_ids: List[str]
@@ -122,34 +142,63 @@ class DbtRunner(DbtRunnerProtocol):
             Dict[str, Dict[str, str]]: Dictionary mapping node IDs to their
                                       properties, including compiled code
         """
+        logger.debug(
+            "Getting source compiled code", extra={"unique_id_count": len(unique_ids)}
+        )
+
+        if not unique_ids:
+            logger.debug("No unique IDs provided")
+            return {}
+
         return self._discovery_client.get_compiled_code(
             self.config.dbt_cloud_environment_id, unique_ids
         )
 
-    def get_all_unique_ids(self, model_names: List[str]) -> Set[str]:
+    def get_all_unique_ids(self, modified_unique_ids: List[str]) -> Set[str]:
         """
         Get all unique IDs affected by the given models, excluding the input models themselves.
         Only returns downstream dependent nodes.
         """
-        logger.info("Running dbt command `dbt ls` to find all affected nodes...")
-        result = subprocess.run(self.DBT_COMMANDS["ls"], capture_output=True, text=True)
+        logger.debug(
+            "Finding affected nodes",
+            extra={
+                "command": " ".join(self.DBT_COMMANDS["ls"]),
+                "modified_count": len(modified_unique_ids),
+            },
+        )
+
+        result = subprocess.run(
+            self.DBT_COMMANDS["ls"],
+            capture_output=True,
+            text=True,
+        )
 
         if result.returncode != 0:
-            logger.error(f"Error listing models: {result.stderr}")
+            logger.error(
+                "Failed to list models",
+                extra={"return_code": result.returncode, "stderr": result.stderr},
+            )
             return set()
 
         unique_ids = set()
         for line in result.stdout.split("\n"):
-            # Extract JSON string between first '{' and last '}'
+            if not line:
+                continue
             json_str = line[line.find("{") : line.rfind("}") + 1]
             try:
                 data = json.loads(json_str)
                 if "unique_id" in data:
                     unique_id = data["unique_id"]
-                    # Only include if it's not one of the input models
-                    if unique_id not in model_names:
+                    if unique_id not in modified_unique_ids:
                         unique_ids.add(unique_id)
-            except (json.JSONDecodeError, ValueError):
+            except json.JSONDecodeError:
                 continue
 
+        logger.info(
+            "Found affected nodes",
+            extra={
+                "affected_count": len(unique_ids),
+                "modified_count": len(modified_unique_ids),
+            },
+        )
         return unique_ids

@@ -7,9 +7,6 @@ from subprocess import CompletedProcess
 from src.config import Config
 from src.discovery_api_queries import QUERIES
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
 
 

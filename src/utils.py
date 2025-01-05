@@ -1,5 +1,6 @@
 # stdlib
 import enum
+import logging
 import os
 import pathlib
 import re
@@ -9,6 +10,8 @@ import yaml
 
 # first party
 from src.config import Config
+
+logger = logging.getLogger(__name__)
 
 
 class JobRunStatus(enum.IntEnum):
@@ -21,6 +24,9 @@ class JobRunStatus(enum.IntEnum):
 
 
 def create_dbt_cloud_profile(config: Config) -> None:
+    """Create dbt Cloud profile for authentication."""
+    logger.debug("Creating dbt Cloud profile")
+
     dbt_cloud_config = {
         "version": 1,
         "context": {
@@ -45,8 +51,21 @@ def create_dbt_cloud_profile(config: Config) -> None:
     with open(config_path, "w") as f:
         yaml.dump(dbt_cloud_config, f)
 
+    logger.info(
+        "Successfully created dbt Cloud profile", extra={"path": str(config_path)}
+    )
+
 
 def trigger_job(config: Config, *, excluded_nodes: list[str] = None) -> dict:
+    """Trigger a dbt Cloud job with optional node exclusions."""
+    logger.debug(
+        "Preparing to trigger dbt Cloud job",
+        extra={
+            "job_id": config.dbt_cloud_job_id,
+            "has_exclusions": bool(excluded_nodes),
+        },
+    )
+
     def extract_pr_number(s):
         match = re.search(r"refs/pull/(\d+)/merge", s)
         return int(match.group(1)) if match else None
@@ -61,7 +80,6 @@ def trigger_job(config: Config, *, excluded_nodes: list[str] = None) -> dict:
     schema_override = f"dbt_cloud_pr_{config.dbt_cloud_job_id}_{pull_request_id}"
 
     # Create payload to pass to job
-    # https://docs.getdbt.com/docs/deploy/ci-jobs#trigger-a-ci-job-with-the-api
     payload = {
         "cause": "Column-aware CI",
         "schema_override": schema_override,
@@ -75,6 +93,19 @@ def trigger_job(config: Config, *, excluded_nodes: list[str] = None) -> dict:
             f"dbt build -s state:modified+ --exclude {excluded_nodes_str}"
         ]
         payload["steps_override"] = steps_override
+        logger.info(
+            "Adding node exclusions to job",
+            extra={"excluded_count": len(excluded_nodes)},
+        )
+
+    logger.info(
+        "Triggering dbt Cloud job",
+        extra={
+            "job_id": config.dbt_cloud_job_id,
+            "schema": schema_override,
+            "pr_id": pull_request_id,
+        },
+    )
 
     return config.dbtc_client.cloud.trigger_job(
         config.dbt_cloud_account_id, config.dbt_cloud_job_id, payload, should_poll=True
