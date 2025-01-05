@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     # Create and run orchestrator
     orchestrator = CiOrchestrator(config)
-    success = orchestrator.run()
+    is_success = orchestrator.run()
 
     # Exit with appropriate status code
-    sys.exit(0 if success else 1)
+    sys.exit(0 if is_success else 1)
