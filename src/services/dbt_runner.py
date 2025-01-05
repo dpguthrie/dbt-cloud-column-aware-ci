@@ -140,6 +140,7 @@ class DbtRunner(DbtRunnerProtocol):
             if line.strip():  # Skip empty lines
                 try:
                     data = json.loads(line.strip())
+                    logger.info(f"Data is: {data}")
                     if "uniqueId" in data:
                         unique_ids.add(data["uniqueId"])
                 except json.JSONDecodeError:
