@@ -30,9 +30,6 @@ class ColumnTracker:
     _tracked_columns: Set[str] = field(default_factory=set)
     _impacted_ids: Set[str] = field(default_factory=set)
 
-    def __init__(self, lineage_service: "LineageService") -> None:
-        self._lineage_service = lineage_service
-
     def track_node_columns(self, node: "Node") -> Set[str]:
         """
         Track columns for a node and identify impacted downstream nodes.
