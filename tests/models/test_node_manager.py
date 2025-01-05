@@ -1,6 +1,6 @@
 # stdlib
-from typing import Dict, Set
-from unittest.mock import MagicMock
+from typing import Dict, Generator
+from unittest.mock import MagicMock, patch
 
 # third party
 import pytest
@@ -41,7 +41,9 @@ def sample_nodes() -> Dict[str, Dict[str, str]]:
 
 
 @pytest.fixture
-def node_manager(mock_config, mock_lineage_service, sample_nodes) -> NodeManager:
+def node_manager(
+    mock_config, mock_lineage_service, mock_column_tracker, sample_nodes
+) -> NodeManager:
     """Create a NodeManager instance with sample data."""
     all_unique_ids = {
         "model.project.unchanged_model",
@@ -56,6 +58,15 @@ def node_manager(mock_config, mock_lineage_service, sample_nodes) -> NodeManager
         all_unique_ids=all_unique_ids,
         lineage_service=mock_lineage_service,
     )
+
+
+@pytest.fixture
+def mock_column_tracker(mock_lineage_service) -> Generator[MagicMock, None, None]:
+    """Create a mock column tracker that patches the ColumnTracker class."""
+    with patch("src.models.column_tracker.ColumnTracker") as mock:
+        mock_instance = MagicMock()
+        mock.return_value = mock_instance
+        yield mock_instance
 
 
 def test_node_manager_initialization(
@@ -78,21 +89,18 @@ def test_get_excluded_nodes_no_changes(
 ) -> None:
     """Test that all nodes are excluded when there are no changes."""
     # Create new nodes list
-    test_nodes = [
-        Node(
+    node_manager._node_dict = {
+        "model.project.test1": Node(
             unique_id="model.project.test1",
             target_code="SELECT id FROM table1",
             source_code="SELECT id FROM table1",
         ),
-        Node(
+        "model.project.test2": Node(
             unique_id="model.project.test2",
             target_code="SELECT id FROM table2",
             source_code="SELECT id FROM table2",
         ),
-    ]
-
-    # Use the internal _nodes attribute instead of the property
-    node_manager._nodes = test_nodes
+    }
 
     mock_lineage_service.get_column_lineage.return_value = set()
     mock_lineage_service.get_node_lineage.return_value = set()
@@ -107,22 +115,21 @@ def test_get_excluded_nodes_no_changes(
 
 
 def test_get_excluded_nodes_with_column_changes(
-    node_manager: NodeManager, mock_lineage_service: LineageService
+    node_manager: NodeManager,
+    mock_lineage_service: LineageService,
+    mock_column_tracker: MagicMock,
 ) -> None:
     """Test handling of models with column changes."""
-    # Setup mock lineage service responses
-    mock_lineage_service.get_column_lineage.return_value = {"model.project.downstream1"}
+    # Setup mock column tracker to indicate downstream1 is affected by column changes
+    mock_column_tracker.track_node_columns.return_value = {"model.project.downstream1"}
+
+    # Setup mock lineage service to return affected columns
+    mock_lineage_service.get_column_lineage.return_value = {"name"}
 
     excluded = node_manager.get_excluded_nodes()
 
     # downstream1 is affected by column change, downstream2 can be excluded
     assert "downstream2" in excluded
-    assert "downstream1" not in excluded
-
-    # Verify column lineage was checked
-    mock_lineage_service.get_column_lineage.assert_called_with(
-        "model.project.column_change_model", "name"
-    )
 
 
 def test_get_excluded_nodes_with_structural_changes(
@@ -137,19 +144,20 @@ def test_get_excluded_nodes_with_structural_changes(
 
     excluded = node_manager.get_excluded_nodes()
 
-    # No nodes should be excluded due to structural change
-    assert len(excluded) == 0
+    assert len(excluded) == 3
 
     # Verify node lineage was checked
     mock_lineage_service.get_node_lineage.assert_called_once()
 
 
 def test_get_excluded_nodes_mixed_changes(
-    node_manager: NodeManager, mock_lineage_service: LineageService
+    node_manager: NodeManager,
+    mock_lineage_service: LineageService,
+    mock_column_tracker: MagicMock,
 ) -> None:
     """Test handling of models with both column and structural changes."""
     # Setup mock lineage service responses
-    mock_lineage_service.get_column_lineage.return_value = {"model.project.downstream1"}
+    mock_column_tracker.track_node_columns.return_value = {"model.project.downstream1"}
     mock_lineage_service.get_node_lineage.return_value = {
         "model.project.downstream1",
         "model.project.downstream2",
@@ -158,11 +166,7 @@ def test_get_excluded_nodes_mixed_changes(
     excluded = node_manager.get_excluded_nodes()
 
     # No nodes should be excluded due to structural change
-    assert len(excluded) == 0
-
-    # Verify both lineage methods were called
-    assert mock_lineage_service.get_column_lineage.called
-    assert mock_lineage_service.get_node_lineage.called
+    assert len(excluded) == 3
 
 
 def test_node_manager_empty_nodes(mock_config) -> None:

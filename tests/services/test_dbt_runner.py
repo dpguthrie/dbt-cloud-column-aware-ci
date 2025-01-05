@@ -27,7 +27,7 @@ def test_compile_models_success(dbt_runner: DbtRunner) -> None:
 
         # Verify correct command was called
         mock_run.assert_called_once_with(
-            DbtRunner.DBT_COMMANDS["compile"], capture_output=True
+            DbtRunner.DBT_COMMANDS["compile"], capture_output=True, text=True
         )
 
 
@@ -90,8 +90,8 @@ def test_get_source_compiled_code(dbt_runner: DbtRunner) -> None:
 def test_get_all_unique_ids(dbt_runner: DbtRunner) -> None:
     """Test retrieval of all affected unique IDs."""
     mock_stdout = """
-    {"uniqueId": "model.project.downstream1"}
-    {"uniqueId": "model.project.downstream2"}
+    19:58:54 {"unique_id": "model.project.downstream1"}
+    19:58:54 {"unique_id": "model.project.downstream2"}
     """
 
     with patch("subprocess.run") as mock_run:
