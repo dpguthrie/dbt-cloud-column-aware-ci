@@ -126,7 +126,10 @@ class DbtRunner(DbtRunnerProtocol):
         )
 
     def get_all_unique_ids(self, model_names: List[str]) -> Set[str]:
-        """Get all unique IDs affected by the given models."""
+        """
+        Get all unique IDs affected by the given models, excluding the input models themselves.
+        Only returns downstream dependent nodes.
+        """
         logger.info("Running dbt command `dbt ls` to find all affected nodes...")
         result = subprocess.run(self.DBT_COMMANDS["ls"], capture_output=True, text=True)
 
@@ -136,12 +139,16 @@ class DbtRunner(DbtRunnerProtocol):
 
         unique_ids = set()
         for line in result.stdout.split("\n"):
-            if line.strip():  # Skip empty lines
-                try:
-                    data = json.loads(line.strip())
-                    if "uniqueId" in data:
-                        unique_ids.add(data["uniqueId"])
-                except json.JSONDecodeError:
-                    continue
+            # Extract JSON string between first '{' and last '}'
+            json_str = line[line.find("{") : line.rfind("}") + 1]
+            try:
+                data = json.loads(json_str)
+                if "unique_id" in data:
+                    unique_id = data["unique_id"]
+                    # Only include if it's not one of the input models
+                    if unique_id not in model_names:
+                        unique_ids.add(unique_id)
+            except (json.JSONDecodeError, ValueError):
+                continue
 
         return unique_ids
