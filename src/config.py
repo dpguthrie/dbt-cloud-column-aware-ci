@@ -17,7 +17,7 @@ class Config:
     dbt_cloud_token_value: str
     dbt_cloud_account_id: str
     dbt_cloud_job_id: str
-    dbt_cloud_environment_id: str = field(init=False, default=None)
+    dbt_cloud_environment_id: str = field(default=None)
     dbtc_client: dbtCloudClient = field(
         init=False
     )  # This is set in post_init, so we'll keep it as a field
@@ -40,9 +40,14 @@ class Config:
 
         missing_vars = []
         required_vars = [
-            field.name
-            for field in cls.__dataclass_fields__.values()
-            if field.init  # This excludes fields with init=False
+            "dbt_cloud_host",
+            "dbt_cloud_service_token",
+            "dbt_cloud_project_id",
+            "dbt_cloud_project_name",
+            "dbt_cloud_token_name",
+            "dbt_cloud_token_value",
+            "dbt_cloud_account_id",
+            "dbt_cloud_job_id",
         ]
 
         for var in required_vars:
