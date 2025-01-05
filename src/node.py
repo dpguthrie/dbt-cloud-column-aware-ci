@@ -20,31 +20,6 @@ logger = logging.getLogger(__name__)
 
 Edit = t.Union[Insert, Move, Remove, Update]
 
-"""
-
-Take the following scenario (where filter changes):
-In [13]: src = 'select 1 as col, 2 as col_2 from x where col > 5'
-
-In [14]: tgt = 'select 1 as col, 2 as col_2 from x where col > 7'
-
-This will create an Insert and Remove breaking change.  Neither will contain a column
-name, but this could be a breaking change and would need to be checked for each downstream
-model, which wouldn't happen right now.
-
-I would need to manually go and add this to the _impacted_unique_ids set by obtaining
-the lineage for the model section syntax of <node.unique_id>+ via the lineage API.
-* This could be done in a single call if I have multiple nodes like these with the syntax:
-
---select <node.unique_id>+ <other_node.unique_id>+ <other_other_node.unique_id>+
-
-** Another scenario**
-
-- If I have both column level changes and whole node level breaking changes, the entire
-node level breaking changes should supercede any column level, and we should just assume
-that we need to test everything
-
-"""
-
 
 @dataclass
 class BreakingChange:
@@ -207,32 +182,6 @@ class NodeManager:
 
         return impacted_unique_ids
 
-    def _get_impacted_unique_ids_for_nodes(self, nodes: list[Node]) -> set[str]:
-        names = [node.unique_id.split(".")[-1] for node in nodes]
-        names_str = "+ ".join(names) + "+"
-        variables = {
-            "environmentId": self.config.dbt_cloud_environment_id,
-            "filter": {
-                "select": f"--select {names_str}",
-                "exclude": f"--exclude {' '.join(names)}",
-                # Only getting models for now
-                "types": ["Model"],
-            },
-        }
-        results = self.config.dbtc_client.metadata.query(
-            QUERIES["node_lineage"], variables
-        )
-        logger.info(f"Results:\n{results}")
-        try:
-            return {
-                r["uniqueId"]
-                for r in results["data"]["environment"]["applied"]["lineage"]
-            }
-        except Exception:
-            logger.error(f"Error occurred retrieving lineage for {names_str}")
-            logger.error(f"Response:\n{results}")
-            return set()
-
     def _get_downstream_nodes_from_column(
         self, unique_id: str, column_name: str
     ) -> set[str]:
@@ -271,6 +220,32 @@ class NodeManager:
             )
 
         return downstream_nodes
+
+    def _get_impacted_unique_ids_for_nodes(self, nodes: list[Node]) -> set[str]:
+        names = [node.unique_id.split(".")[-1] for node in nodes]
+        names_str = "+ ".join(names) + "+"
+        variables = {
+            "environmentId": self.config.dbt_cloud_environment_id,
+            "filter": {
+                "select": f"--select {names_str}",
+                "exclude": f"--exclude {' '.join(names)}",
+                # Only getting models for now
+                "types": ["Model"],
+            },
+        }
+        results = self.config.dbtc_client.metadata.query(
+            QUERIES["node_lineage"], variables
+        )
+        logger.info(f"Results:\n{results}")
+        try:
+            return {
+                r["uniqueId"]
+                for r in results["data"]["environment"]["applied"]["lineage"]
+            }
+        except Exception:
+            logger.error(f"Error occurred retrieving lineage for {names_str}")
+            logger.error(f"Response:\n{results}")
+            return set()
 
     def get_excluded_nodes(self) -> list[str]:
         if not self.nodes:
