@@ -83,6 +83,66 @@ jobs:
 
 ![Example of flow](./assets/column_aware_ci_flow.png)
 
+## Codebase Structure
+
+### Core Components
+
+#### Configuration (`src/config.py`)
+- Manages application configuration through the `Config` class
+- Handles dbt Cloud credentials and settings
+- Provides environment variable parsing via `from_env()`
+
+#### Main Entry Point (`src/main.py`)
+- Sets up logging configuration
+- Initializes the application configuration
+- Creates and runs the CI orchestrator
+- Handles top-level error handling
+
+### Models (`src/models/`)
+
+- `Node`: Represents a dbt model with source and target code
+- `NodeFactory`: Creates Node instances from raw data
+- `NodeManager`: Manages collections of nodes and their dependencies
+- `BreakingChange`: Analyzes SQL changes to detect breaking modifications
+- `ColumnTracker`: Tracks column-level changes across models
+
+### Services (`src/services/`)
+
+#### Core Services
+- `CiOrchestrator`: Coordinates the entire CI workflow
+- `DbtRunner`: Handles dbt CLI command execution
+- `DiscoveryClient`: Interfaces with dbt Cloud's Discovery API
+- `LineageService`: Manages model lineage information
+
+#### Interface Definitions (`src/interfaces/`)
+- Defines protocol classes for key components
+- Ensures consistent implementation across services
+- Includes protocols for:
+  - `DbtRunnerProtocol`
+  - `DiscoveryClientProtocol`
+  - `LineageServiceProtocol`
+  - `OrchestratorProtocol`
+
+### Utilities
+
+#### Support Functions (`src/utils.py`)
+- Contains helper functions for:
+  - Creating dbt Cloud profiles
+  - Triggering dbt Cloud jobs
+  - Managing job run statuses
+
+#### GraphQL Queries (`src/discovery_api_queries.py`)
+- Defines GraphQL queries for the Discovery API
+- Includes queries for:
+  - Column lineage
+  - Compiled code
+  - Node lineage
+
+#### Logging Configuration (`src/logging_config.py`)
+- Sets up standardized logging across the application
+- Configures console output formatting
+- Defines log levels and handlers
+
 ## Caveats
 
 - Only been tested with Snowflake
@@ -91,7 +151,6 @@ jobs:
 - The `favor-state` flag is used when compiling the target SQL.  This is done to try and minimize any changes that are picked up solely because of environment separation (e.g. db.my_dev_schema.dim_customers vs. db.my_prod_schema.dim_customers).  However, this doesn’t apply if the node is also part of the selected nodes.  See example below when running `dbt compile -s state:modified --favor-state`:
 
 ![Example of favor-state flag](./assets/favor_state.png)
-
 
 ## Contributing
 
