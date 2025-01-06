@@ -33,6 +33,10 @@ inputs:
   dbt_cloud_environment_id:
     description: dbt Cloud Environment ID (this is the environment that the CI job defers to).  If not given, it will be inferred from the CI job.
     required: false
+  log_level:
+    description: "Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
+    required: false
+    default: "INFO"
 runs:
   using: "docker"
   image: "Dockerfile"

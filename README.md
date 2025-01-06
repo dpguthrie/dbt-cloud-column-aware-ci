@@ -48,6 +48,7 @@ This results in faster CI runs and more efficient use of warehouse resources.
 | `dbt_cloud_job_id` | dbt Cloud CI Job ID for the current project | Yes | - |
 | `dbt_cloud_host` | dbt Cloud host | No | cloud.getdbt.com |
 | `dbt_cloud_environment_id` | dbt Cloud Environment ID for job deferral | No | Inferred from job |
+| `log_level` | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) | No | INFO |
 
 ## Usage
 
@@ -75,6 +76,7 @@ jobs:
         dbt_cloud_project_name: 'my-dbt-project'
         dbt_cloud_job_id: '98765'
         dbt_cloud_environment_id: '238221'
+        log_level: 'DEBUG'
 ```
 
 ## How It Works

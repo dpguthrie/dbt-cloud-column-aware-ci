@@ -28,6 +28,12 @@ DEFAULT_LOGGING_CONFIG: Dict[str, Any] = {
 }
 
 
-def setup_logging() -> None:
-    """Configure logging for the application."""
-    logging.config.dictConfig(DEFAULT_LOGGING_CONFIG)
+def setup_logging(level: str = "INFO") -> None:
+    """Configure logging for the application.
+
+    Args:
+        level: The logging level to use (e.g., "DEBUG", "INFO", "WARNING"). Defaults to "INFO".
+    """
+    config = DEFAULT_LOGGING_CONFIG.copy()
+    config["loggers"]["src"]["level"] = level
+    logging.config.dictConfig(config)

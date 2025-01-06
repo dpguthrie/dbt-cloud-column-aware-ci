@@ -1,5 +1,6 @@
 # stdlib
 import logging
+import os
 import sys
 
 # first party
@@ -8,7 +9,7 @@ from src.logging_config import setup_logging
 from src.services.orchestrator import CiOrchestrator
 
 # Set up logging before anything else
-setup_logging()
+setup_logging(os.getenv("INPUT_LOG_LEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
 
