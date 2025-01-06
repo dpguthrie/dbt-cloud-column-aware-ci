@@ -25,7 +25,7 @@ This results in faster CI runs and more efficient use of warehouse resources.
 - A dbt Cloud [Personal access token](https://docs.getdbt.com/docs/dbt-cloud-apis/user-tokens#create-a-personal-access-token)
 - A dbt Cloud [Service token](https://docs.getdbt.com/docs/dbt-cloud-apis/service-tokens) with the following permissions:
 
-| Permission | Usage | 
+| Permission | Usage |
 |-------|-------------|
 | Metadata | Used to return column-level lineage and compiled code |
 | Job Runner | Used to trigger the CI job configured in the workflow |
@@ -61,14 +61,16 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Run Column-Aware dbt Cloud CI
-      uses: dpguthrie/dbt-cloud-column-aware-ci@0.1.0
+      uses: dpguthrie/dbt-cloud-column-aware-ci@0.2.0
       with:
         dbt_cloud_service_token: ${{ secrets.DBT_CLOUD_SERVICE_TOKEN }}
         dbt_cloud_token_name: 'github-actions'
+        dbt_cloud_token_value: ${{ secrets.DBT_CLOUD_TOKEN_VALUE }}
         dbt_cloud_account_id: '12345'
         dbt_cloud_project_id: '67890'
         dbt_cloud_project_name: 'my-dbt-project'
         dbt_cloud_job_id: '98765'
+        dbt_cloud_environment_id: '238221'
 ```
 
 ## How It Works
