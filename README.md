@@ -2,6 +2,10 @@
 
 This GitHub Action enables column-aware CI for dbt Cloud Enterprise accounts by leveraging dbt Cloud's column-level lineage feature. It intelligently determines which downstream models need to be rebuilt based on column-level changes in your dbt models.
 
+## Demo
+
+https://www.loom.com/share/c9ddaaa259b8413c9ab09adb670fd996?sid=c03617bd-2743-43c8-bb68-c2e9502a0a2b
+
 ## Overview
 
 Traditional dbt CI runs rebuild all downstream dependencies when a model changes. This action optimizes CI runs by:
