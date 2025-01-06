@@ -1,12 +1,10 @@
-from typing import Protocol, Set
+from typing import TYPE_CHECKING, List, Protocol, Set
 
-from typing_extensions import TypeAlias
-
-# Use forward reference with string literal for Node type
-Node: TypeAlias = "Node"  # type: ignore
+if TYPE_CHECKING:
+    from src.models.node import Node
 
 
 class LineageServiceProtocol(Protocol):
-    def get_node_lineage(self, nodes: list["Node"]) -> Set[str]: ...
+    def get_node_lineage(self, nodes: List["Node"]) -> Set[str]: ...
 
     def get_column_lineage(self, node_id: str, column_name: str) -> Set[str]: ...
