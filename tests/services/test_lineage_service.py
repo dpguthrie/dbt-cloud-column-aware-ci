@@ -1,6 +1,4 @@
 # stdlib
-from typing import Dict, Set
-from unittest.mock import MagicMock
 
 # third party
 import pytest

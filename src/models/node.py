@@ -15,7 +15,6 @@ from src.config import Config
 from src.models.breaking_change import BreakingChange
 
 if TYPE_CHECKING:
-    from src.models.column_tracker import ColumnTracker
     from src.models.node_factory import NodeFactory
     from src.services.lineage_service import LineageService
 

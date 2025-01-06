@@ -1,8 +1,6 @@
 # stdlib
 import json
-from pathlib import Path
-from typing import Dict
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import mock_open, patch
 
 # third party
 import pytest
