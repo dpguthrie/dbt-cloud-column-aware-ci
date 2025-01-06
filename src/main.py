@@ -8,13 +8,14 @@ from src.config import Config
 from src.logging_config import setup_logging
 from src.services.orchestrator import CiOrchestrator
 
-# Set up logging before anything else
-setup_logging(os.getenv("INPUT_LOG_LEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
 
-if __name__ == "__main__":
+def main():
     try:
+        # Set up logging before anything else
+        setup_logging(os.getenv("INPUT_LOG_LEVEL", "INFO"))
+
         # Create config from environment variables
         config = Config.from_env()
 
@@ -27,3 +28,7 @@ if __name__ == "__main__":
     except Exception:
         logger.exception("Fatal error in main process")
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
