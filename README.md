@@ -83,6 +83,8 @@ jobs:
 3. Creates a filtered CI run that excludes unaffected downstream models
 4. Monitors the job run and reports status back to GitHub
 
+See example of what the flow looks like below:
+
 ![Example of flow](./assets/column_aware_ci_flow.png)
 
 ## Codebase Structure
