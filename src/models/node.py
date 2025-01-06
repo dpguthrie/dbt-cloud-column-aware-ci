@@ -170,11 +170,8 @@ class NodeManager:
         Returns:
             list[str]: List of node names that can be excluded
         """
-        if not self.nodes:
-            return list()
-
-        if not self.all_unique_ids:
-            return list()
+        if not self.nodes or not self.all_unique_ids:
+            return []
 
         # Column level changes
         for node in self.nodes:
