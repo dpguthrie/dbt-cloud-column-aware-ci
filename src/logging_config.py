@@ -5,15 +5,18 @@ from typing import Any, Dict
 
 
 class StructuredFormatter(logging.Formatter):
-    def format(self, record):
+    def format(self, record: logging.LogRecord) -> str:
+        # Get the standard formatting
+        message = super().format(record)
+
+        # Handle the extra dict if it exists
         if hasattr(record, "extra"):
             try:
-                extra = json.dumps(record.extra, default=str)
+                extra_formatted = json.dumps(record.extra, default=str)
+                return f"{message} - extra: {extra_formatted}"
             except Exception:
-                extra = str(record.extra)
-            record.extra = extra
-
-        return super().format(record)
+                return f"{message} - extra: {str(record.extra)}"
+        return message
 
 
 DEFAULT_LOGGING_CONFIG: Dict[str, Any] = {
@@ -22,7 +25,7 @@ DEFAULT_LOGGING_CONFIG: Dict[str, Any] = {
     "formatters": {
         "standard": {
             "()": StructuredFormatter,  # Use our custom formatter
-            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s, %(extra)s",
+            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
         },
     },
