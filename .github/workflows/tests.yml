@@ -28,4 +28,7 @@ jobs:
         uv run ruff format --check .
 
     - name: Run tests with coverage
+      env:
+        DBT_CLOUD_SERVICE_TOKEN: ${{ secrets.DBT_CLOUD_SERVICE_TOKEN }}
+        DBT_CLOUD_TOKEN_VALUE: ${{ secrets.DBT_CLOUD_TOKEN_VALUE }}
       run: uv run pytest --cov=src --cov-report=xml --cov-report=term-missing
