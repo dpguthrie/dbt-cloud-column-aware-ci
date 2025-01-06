@@ -160,6 +160,6 @@ cython_debug/
 #.idea/
 
 .vscode/
-
+.ruff_cache/
 .coverage
 htmlcov/
