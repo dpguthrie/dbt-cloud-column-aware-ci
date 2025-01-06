@@ -87,6 +87,23 @@ See example of what the flow looks like below:
 
 ![Example of flow](./assets/column_aware_ci_flow.png)
 
+## Examples
+
+The following examples demonstrate different types of schema changes and their impact:
+
+### Non-Breaking Change
+![Non-Breaking Change](assets/non_breaking_change.png)
+Adding a new column to a table is considered a non-breaking change, which means no models downstream need to be run
+
+### Column Breaking Change
+![Column Breaking Change](assets/column_breaking_change.png)
+Modifying an existing column is a breaking change that **could** impact downstream models.  **Only models referencing that modified column will be run as part of CI.**
+
+### Node Breaking Change
+![Node Breaking Change](assets/node_breaking_change.png)
+Modifying a where clause has the potential to break any models downstream of that change, so nothing downstream of this  model will be excluded.
+
+
 ## Codebase Structure
 
 ### Core Components
