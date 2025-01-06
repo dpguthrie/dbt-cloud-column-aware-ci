@@ -22,4 +22,5 @@ dev-dependencies = [
     "pre-commit",
     "pytest",
     "pre-commit",
+    "pytest-cov",
 ]
