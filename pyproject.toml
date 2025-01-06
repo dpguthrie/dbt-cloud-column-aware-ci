@@ -19,5 +19,8 @@ packages = ["src"]
 [tool.uv]
 dev-dependencies = [
     "ruff>=0.6.2",
-    "pre-commit",    
+    "pre-commit",
+    "pytest",
+    "pre-commit",
+    "pytest-cov",
 ]
