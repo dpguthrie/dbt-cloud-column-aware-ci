@@ -21,4 +21,5 @@ dev-dependencies = [
     "ruff>=0.6.2",
     "pre-commit",
     "pytest",
+    "pre-commit",
 ]
