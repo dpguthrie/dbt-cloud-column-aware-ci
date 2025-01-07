@@ -37,6 +37,9 @@ inputs:
     description: "Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
     required: false
     default: "INFO"
+  dialect:
+    description: "SQL dialect used in the dbt project (e.g., 'snowflake', 'bigquery', 'redshift')"
+    required: true
 runs:
   using: "docker"
   image: "Dockerfile"
