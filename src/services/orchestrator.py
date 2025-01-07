@@ -71,9 +71,7 @@ class CiOrchestrator(OrchestratorProtocol):
         target_nodes = self.dbt_runner.get_target_compiled_code()
 
         if not target_nodes:
-            logger.info(
-                "Nothing modified so exiting early without triggering a CI job."
-            )
+            logger.info("Nothing found in the run_results.json file.")
             return {}
 
         source_nodes = self.dbt_runner.get_source_compiled_code(
