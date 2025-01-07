@@ -1,9 +1,12 @@
 # stdlib
+import logging
 import os
 from dataclasses import dataclass, field
 
 # third party
 from dbtc import dbtCloudClient
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -33,11 +36,20 @@ class Config:
     @classmethod
     def from_env(cls) -> "Config":
         """Create a Config instance from environment variables."""
+
+        def is_valid_field(cls, field_name: str) -> bool:
+            return field_name in cls.__dataclass_fields__
+
         env_vars = {}
         for env_var in os.environ:
             if env_var.startswith("INPUT_DBT_CLOUD_"):
                 name = env_var.replace("INPUT_", "").lower()
-                env_vars[name] = os.environ[env_var]
+                if is_valid_field(cls, name):
+                    env_vars[name] = os.environ[env_var]
+                else:
+                    logger.warning(
+                        f"Ignoring invalid field name found in environment: {name}"
+                    )
 
         dialect = os.getenv("INPUT_DIALECT", None)
         if dialect is not None:
