@@ -22,11 +22,13 @@ def sample_nodes() -> list[Node]:
             unique_id="model.project.test_model",
             target_code="SELECT id, name FROM table",
             source_code="SELECT id FROM table",
+            dialect="snowflake",
         ),
         Node(
             unique_id="model.project.other_model",
             target_code="SELECT * FROM other_table",
             source_code="SELECT * FROM other_table",
+            dialect="snowflake",
         ),
     ]
 

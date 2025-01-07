@@ -39,6 +39,7 @@ class Node:
     unique_id: str
     target_code: str
     source_code: str
+    dialect: str
 
     def __post_init__(self) -> None:
         """
@@ -47,8 +48,8 @@ class Node:
         Parses both versions of the SQL code and identifies breaking changes
         between them.
         """
-        self._source_exp = parse_one(self.source_code)
-        self._target_exp = parse_one(self.target_code)
+        self._source_exp = parse_one(self.source_code, dialect=self.dialect)
+        self._target_exp = parse_one(self.target_code, dialect=self.dialect)
         try:
             self.changes = diff(self._source_exp, self._target_exp, delta_only=True)
         except Exception as e:
@@ -100,13 +101,16 @@ class Node:
 
 class NodeFactory:
     @staticmethod
-    def create_nodes(nodes_data: Dict[str, Dict[str, str]]) -> Dict[str, "Node"]:
+    def create_nodes(
+        nodes_data: Dict[str, Dict[str, str]], dialect: str
+    ) -> Dict[str, "Node"]:
         """Create Node instances from raw node data."""
         return {
             node_id: Node(
                 unique_id=data["unique_id"],
                 source_code=data["source_code"],
                 target_code=data["target_code"],
+                dialect=dialect,
             )
             for node_id, data in nodes_data.items()
         }
@@ -145,7 +149,7 @@ class NodeManager:
         self.config = config
         self._lineage_service = lineage_service or LineageService(config)
         self._column_tracker = ColumnTracker(self._lineage_service)
-        self._node_dict = NodeFactory.create_nodes(all_nodes)
+        self._node_dict = NodeFactory.create_nodes(all_nodes, self.config.dialect)
         self.all_unique_ids = all_unique_ids
         self._all_impacted_unique_ids: t.Set[str] = set()
 
@@ -170,8 +174,11 @@ class NodeManager:
         Returns:
             list[str]: List of node names that can be excluded
         """
-        if not self.nodes or not self.all_unique_ids:
-            return []
+        if not self.nodes:
+            return list()
+
+        if not self.all_unique_ids:
+            return list()
 
         # Column level changes
         for node in self.nodes:

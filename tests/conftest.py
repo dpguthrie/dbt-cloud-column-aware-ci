@@ -26,6 +26,7 @@ def mock_config() -> Config:
         dbt_cloud_token_name="cloud-cli-6d65",
         dbt_cloud_token_value=os.environ["DBT_CLOUD_TOKEN_VALUE"],
         dbt_cloud_environment_id="218762",
+        dialect="snowflake",
     )
 
 
