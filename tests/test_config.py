@@ -27,6 +27,7 @@ def test_config_from_env():
         "INPUT_DBT_CLOUD_TOKEN_VALUE": "test_token_value",
         "INPUT_DBT_CLOUD_ACCOUNT_ID": "43786",
         "INPUT_DBT_CLOUD_JOB_ID": "567183",
+        "INPUT_DIALECT": "snowflake",
     }
 
     with (
@@ -54,6 +55,7 @@ def test_config_from_env_with_env_id():
         "INPUT_DBT_CLOUD_ACCOUNT_ID": "43786",
         "INPUT_DBT_CLOUD_JOB_ID": "567183",
         "INPUT_DBT_CLOUD_ENVIRONMENT_ID": "218762",
+        "INPUT_DIALECT": "snowflake",
     }
 
     with (

@@ -94,11 +94,13 @@ def test_get_excluded_nodes_no_changes(
             unique_id="model.project.test1",
             target_code="SELECT id FROM table1",
             source_code="SELECT id FROM table1",
+            dialect="snowflake",
         ),
         "model.project.test2": Node(
             unique_id="model.project.test2",
             target_code="SELECT id FROM table2",
             source_code="SELECT id FROM table2",
+            dialect="snowflake",
         ),
     }
 

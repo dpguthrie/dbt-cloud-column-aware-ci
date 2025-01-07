@@ -17,6 +17,7 @@ class Config:
     dbt_cloud_token_value: str
     dbt_cloud_account_id: str
     dbt_cloud_job_id: str
+    dialect: str
     dbt_cloud_environment_id: str = field(default=None)
     dbtc_client: dbtCloudClient = field(
         init=False
@@ -38,6 +39,10 @@ class Config:
                 name = env_var.replace("INPUT_", "").lower()
                 env_vars[name] = os.environ[env_var]
 
+        dialect = os.getenv("INPUT_DIALECT", None)
+        if dialect is not None:
+            env_vars["dialect"] = dialect
+
         missing_vars = []
         required_vars = [
             "dbt_cloud_host",
@@ -48,6 +53,7 @@ class Config:
             "dbt_cloud_token_value",
             "dbt_cloud_account_id",
             "dbt_cloud_job_id",
+            "dialect",
         ]
 
         for var in required_vars:

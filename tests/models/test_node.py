@@ -10,9 +10,14 @@ def create_node():
     """Helper fixture to create Node instances for testing."""
 
     def _create_node(
-        source: str, target: str, unique_id: str = "model.test.test_model"
+        source: str,
+        target: str,
+        unique_id: str = "model.test.test_model",
+        dialect: str = "snowflake",
     ):
-        return Node(unique_id=unique_id, target_code=target, source_code=source)
+        return Node(
+            unique_id=unique_id, target_code=target, source_code=source, dialect=dialect
+        )
 
     return _create_node
 
@@ -75,13 +80,13 @@ def test_table_source_change(create_node):
 def test_join_condition_change(create_node):
     """Test when join conditions change - should ignore column changes."""
     source = """
-        SELECT o.id, o.amount 
-        FROM orders o 
+        SELECT o.id, o.amount
+        FROM orders o
         LEFT JOIN customers c ON o.customer_id = c.id
     """
     target = """
-        SELECT o.id, o.amount 
-        FROM orders o 
+        SELECT o.id, o.amount
+        FROM orders o
         INNER JOIN customers c ON o.customer_id = c.id
     """
 
@@ -116,13 +121,13 @@ def test_multiple_column_changes(create_node):
 def test_window_function_change(create_node):
     """Test when window function changes - should be a breaking change."""
     source = """
-        SELECT 
+        SELECT
             id,
             ROW_NUMBER() OVER (PARTITION BY category_id ORDER BY amount) as row_num
         FROM transactions
     """
     target = """
-        SELECT 
+        SELECT
             id,
             RANK() OVER (PARTITION BY category_id ORDER BY amount) as row_num
         FROM transactions
