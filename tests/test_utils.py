@@ -116,7 +116,7 @@ def test_trigger_job_invalid_pr_ref(mock_config):
 @patch.dict(
     "os.environ",
     {
-        "GITHUB_TOKEN": "fake-token",
+        "INPUT_GITHUB_TOKEN": "fake-token",
         "GITHUB_REPOSITORY": "org/repo",
         "GITHUB_REF": "refs/pull/123/merge",
     },
@@ -162,10 +162,16 @@ def test_post_dry_run_message_success(mock_post):
         # Intentionally missing GITHUB_TOKEN
     },
 )
-def test_post_dry_run_message_missing_env_vars(mock_post):
+def test_post_dry_run_message_missing_env_vars(mock_post, caplog):
     """Test posting dry run message with missing environment variables."""
     excluded_nodes = ["excluded1"]
     post_dry_run_message(excluded_nodes)
 
     # Verify no API call was made
     mock_post.assert_not_called()
+
+    # Verify log message
+    assert (
+        "Missing required environment variables for GitHub comment: token"
+        in caplog.text
+    )
