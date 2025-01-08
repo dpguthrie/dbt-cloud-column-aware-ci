@@ -49,6 +49,7 @@ This results in faster CI runs and more efficient use of warehouse resources.
 | `dialect` | SQL dialect of your warehouse (e.g., 'snowflake') | Yes | - |
 | `dbt_cloud_environment_id` | dbt Cloud Environment ID for job deferral | No | Inferred from job |
 | `dbt_cloud_host` | dbt Cloud host | No | cloud.getdbt.com |
+| `dry_run` | When true, analyzes changes but doesn't trigger dbt Cloud job | No | false |
 | `github_token` | GitHub token for API authentication | No | ${{ github.token }} |
 | `log_level` | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) | No | INFO |
 
