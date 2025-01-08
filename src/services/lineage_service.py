@@ -10,7 +10,7 @@ from src.services.discovery_client import DiscoveryClient
 
 logger = logging.getLogger(__name__)
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from src.models.node import Node
 
 
