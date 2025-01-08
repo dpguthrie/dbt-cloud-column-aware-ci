@@ -129,7 +129,6 @@ def post_dry_run_message(excluded_nodes: list[str]) -> None:
 
     dry_run_message = (
         "## Column-aware CI Results (dry run)\n\n"
-        "Dry run mode is enabled and a dbt Cloud job will not be triggered.\n"
         "The total number of models that would've been excluded from the build "
         f"are: {len(excluded_nodes or [])}"
         "\n<details>"
