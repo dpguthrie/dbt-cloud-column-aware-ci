@@ -119,16 +119,23 @@ def post_dry_run_message(excluded_nodes: list[str]) -> None:
         return int(match.group(1)) if match else None
 
     """Post a message to the console indicating that the job would have been run with the given exclusions."""
+    # Convert None to empty list and ensure proper markdown formatting
+    nodes_list = sorted(excluded_nodes or [])
+    nodes_markdown = (
+        "\n".join([f"* {node}" for node in nodes_list])
+        if nodes_list
+        else "_No models excluded_"
+    )
+
     dry_run_message = (
         "## Column-aware CI Results (dry run)\n\n"
         "Dry run mode is enabled and a dbt Cloud job will not be triggered.\n"
         "The total number of models that would've been excluded from the build "
         f"are: {len(excluded_nodes or [])}"
         "\n<details>"
-        "<summary>Models that would've been excluded from the build are listed below:</summary>\n"
-        + "\n".join([f" - {node}" for node in sorted(excluded_nodes or [])])
-        + "\n"
-        "</details>"
+        "<summary>Models that would've been excluded from the build are listed below:</summary>\n\n"
+        f"{nodes_markdown}"
+        "\n</details>"
     )
     logger.info(dry_run_message)
 
