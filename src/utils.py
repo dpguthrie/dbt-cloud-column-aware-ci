@@ -6,6 +6,7 @@ import pathlib
 import re
 
 # third party
+import requests
 import yaml
 
 # first party
@@ -110,3 +111,48 @@ def trigger_job(config: Config, *, excluded_nodes: list[str] = None) -> dict:
     return config.dbtc_client.cloud.trigger_job(
         config.dbt_cloud_account_id, config.dbt_cloud_job_id, payload, should_poll=True
     )
+
+
+def post_dry_run_message(excluded_nodes: list[str]) -> None:
+    def extract_pr_number(s):
+        match = re.search(r"refs/pull/(\d+)/merge", s)
+        return int(match.group(1)) if match else None
+
+    """Post a message to the console indicating that the job would have been run with the given exclusions."""
+    dry_run_message = (
+        "## Column-aware CI Results (dry run)\n\n"
+        "Dry run mode is enabled and a dbt Cloud job will not be triggered.\n"
+        "The total number of models that would've been excluded from the build "
+        f"are: {len(excluded_nodes or [])}"
+        "\n<details>"
+        "<summary>Models that would've been excluded from the build are listed below:</summary>\n"
+        + "\n".join([f" - {node}" for node in sorted(excluded_nodes or [])])
+        + "\n"
+        "</details>"
+    )
+    logger.info(dry_run_message)
+
+    required_env_vars = {
+        "token": os.getenv("GITHUB_TOKEN", None),
+        "repository": os.getenv("GITHUB_REPOSITORY", None),
+        "pull_request_id": extract_pr_number(os.getenv("GITHUB_REF", "")),
+    }
+
+    if all(required_env_vars.values()):
+        url = f"https://api.github.com/repos/{required_env_vars['repository']}/issues/{required_env_vars['pull_request_id']}/comments"
+        headers = {
+            "Authorization": f"Bearer {required_env_vars['token']}",
+            "Accept": "application/vnd.github.v3+json",
+        }
+        response = requests.post(url, headers=headers, json={"body": dry_run_message})
+        if response.ok:
+            logger.info("Successfully posted dry run message to GitHub")
+        else:
+            logger.error("Failed to post dry run message to GitHub")
+
+    else:
+        missing_vars = [k for k, v in required_env_vars.items() if not v]
+        logger.warning(
+            "Missing required environment variables for GitHub comment: "
+            f"{', '.join(missing_vars)}"
+        )
