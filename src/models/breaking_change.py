@@ -86,7 +86,7 @@ class BreakingChange:
 
         # Get the CTE alias and column name from the original expression
         cte_alias = self._find_cte_alias(root, cte)
-        column_name = expr.output_name
+        column_name = expr.alias_or_name
 
         # Find all columns in the main SELECT that reference this CTE
         for column in find_all_in_scope(root, exp.Column):
@@ -97,8 +97,8 @@ class BreakingChange:
                     # Get the final output name (which may be an alias)
                     parent_alias = column.find_ancestor(exp.Alias)
                     if parent_alias:
-                        return parent_alias.output_name
-                    return column.output_name
+                        return parent_alias.alias_or_name
+                    return column.alias_or_name
 
         # If we couldn't find a reference, return the original name
         return column_name
@@ -121,7 +121,7 @@ class BreakingChange:
                 if self._in_cte(expr):
                     return self._find_parent_column_name(expr)
                 else:
-                    return expr.output_name
+                    return expr.alias_or_name
 
             elif expr.depth < 1:
                 return None
