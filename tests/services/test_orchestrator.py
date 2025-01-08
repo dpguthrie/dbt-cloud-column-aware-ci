@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import patch
 
 import pytest
@@ -43,6 +44,28 @@ def test_compile_and_get_nodes_with_changes(orchestrator, mock_dbt_runner):
     mock_dbt_runner.compile_models.assert_called_once()
     mock_dbt_runner.get_target_compiled_code.assert_called_once()
     mock_dbt_runner.get_source_compiled_code.assert_called_once_with(["model.test"])
+    assert result == expected
+
+
+def test_target_nodes_change_sources_nodes_no_change(
+    orchestrator, mock_dbt_runner, caplog
+):
+    """Test compile_and_get_nodes when there are modified models."""
+    caplog.set_level(logging.INFO)
+    target_nodes = {"model.test": {"target": "code1"}}
+    source_nodes = {}
+    expected = {}
+
+    mock_dbt_runner.get_target_compiled_code.return_value = target_nodes
+    mock_dbt_runner.get_source_compiled_code.return_value = source_nodes
+
+    result = orchestrator.compile_and_get_nodes()
+
+    mock_dbt_runner.compile_models.assert_called_once()
+    mock_dbt_runner.get_target_compiled_code.assert_called_once()
+    mock_dbt_runner.get_source_compiled_code.assert_called_once_with(["model.test"])
+
+    assert "Modified resources `model.test`" in caplog.text
     assert result == expected
 
 
@@ -139,3 +162,51 @@ def test_run_handles_exceptions(orchestrator, caplog):
 
         assert result is False
         assert "Error during CI process: Test error" in caplog.text
+
+
+def test_trigger_and_check_job_dry_run_no_nodes(orchestrator, mock_config, caplog):
+    """Test dry run with no excluded nodes."""
+    caplog.set_level(logging.INFO)
+    mock_config.dry_run = True
+
+    result = orchestrator.trigger_and_check_job()
+
+    assert result is True
+    assert "DRY RUN MODE" in caplog.text
+    assert (
+        "Models that would've been excluded from the build are listed below:"
+        in caplog.text
+    )
+    # Verify empty list produces no node entries
+    assert " - " not in caplog.text
+
+
+def test_trigger_and_check_job_dry_run_with_nodes(orchestrator, mock_config, caplog):
+    """Test dry run with excluded nodes."""
+    caplog.set_level(logging.INFO)
+    mock_config.dry_run = True
+    excluded_nodes = ["node1", "node2"]
+
+    result = orchestrator.trigger_and_check_job(excluded_nodes=excluded_nodes)
+
+    assert result is True
+    assert "DRY RUN MODE" in caplog.text
+    assert "2" in caplog.text
+    assert "node1" in caplog.text
+    assert "node2" in caplog.text
+
+
+def test_trigger_and_check_job_not_dry_run(orchestrator, mock_config):
+    """Test normal run (not dry run) still works."""
+    mock_config.dry_run = False
+
+    with patch("src.services.orchestrator.trigger_job") as mock_trigger_job:
+        mock_trigger_job.return_value = {"status": "success"}
+        excluded_nodes = ["model.test.node1"]
+
+        result = orchestrator.trigger_and_check_job(excluded_nodes=excluded_nodes)
+
+        assert result is True
+        mock_trigger_job.assert_called_once_with(
+            mock_config, excluded_nodes=excluded_nodes
+        )

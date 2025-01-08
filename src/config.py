@@ -22,6 +22,7 @@ class Config:
     dbt_cloud_job_id: str
     dialect: str
     dbt_cloud_environment_id: str = field(default=None)
+    dry_run: bool = field(default=False)
     dbtc_client: dbtCloudClient = field(
         init=False
     )  # This is set in post_init, so we'll keep it as a field
@@ -54,6 +55,9 @@ class Config:
         dialect = os.getenv("INPUT_DIALECT", None)
         if dialect is not None:
             env_vars["dialect"] = dialect
+
+        dry_run = os.getenv("INPUT_DRY_RUN", "false").lower() == "true"
+        env_vars["dry_run"] = dry_run
 
         missing_vars = []
         required_vars = [

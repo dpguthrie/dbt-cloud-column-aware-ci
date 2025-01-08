@@ -1,3 +1,4 @@
+import os
 from unittest.mock import patch
 
 import pytest
@@ -116,3 +117,27 @@ def test_set_deferring_environment_id_missing_data(mock_config):
             "An error occurred retrieving your job's deferring environment ID"
             in str(exc_info.value)
         )
+
+
+def test_config_dry_run(mock_config):
+    # Default value from mock_config fixture should be False
+    assert mock_config.dry_run is False
+
+    # Test creating config with dry_run=True from environment
+    os.environ.update(
+        {
+            "INPUT_DBT_CLOUD_HOST": mock_config.dbt_cloud_host,
+            "INPUT_DBT_CLOUD_SERVICE_TOKEN": mock_config.dbt_cloud_service_token,
+            "INPUT_DBT_CLOUD_PROJECT_ID": mock_config.dbt_cloud_project_id,
+            "INPUT_DBT_CLOUD_PROJECT_NAME": mock_config.dbt_cloud_project_name,
+            "INPUT_DBT_CLOUD_TOKEN_NAME": mock_config.dbt_cloud_token_name,
+            "INPUT_DBT_CLOUD_TOKEN_VALUE": mock_config.dbt_cloud_token_value,
+            "INPUT_DBT_CLOUD_ACCOUNT_ID": mock_config.dbt_cloud_account_id,
+            "INPUT_DBT_CLOUD_JOB_ID": mock_config.dbt_cloud_job_id,
+            "INPUT_DIALECT": mock_config.dialect,
+            "INPUT_DRY_RUN": "true",
+        }
+    )
+
+    config_with_dry_run = Config.from_env()
+    assert config_with_dry_run.dry_run is True

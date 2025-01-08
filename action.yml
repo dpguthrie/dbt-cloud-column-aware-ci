@@ -40,6 +40,10 @@ inputs:
   dialect:
     description: "SQL dialect used in the dbt project (e.g., 'snowflake', 'bigquery', 'redshift')"
     required: true
+  dry_run:
+    description: "If true, will compile and analyze changes but won't trigger the dbt Cloud job"
+    required: false
+    default: false
 runs:
   using: "docker"
   image: "Dockerfile"

@@ -5,7 +5,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Set
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from src.models.node import Node
     from src.services.lineage_service import LineageService
 
@@ -65,7 +65,7 @@ class ColumnTracker:
         return impacted_ids
 
     @property
-    def impacted_ids(self) -> Set[str]:
+    def impacted_ids(self):
         """
         Get all node IDs impacted by tracked column changes.
 
@@ -73,4 +73,4 @@ class ColumnTracker:
             Set[str]: Set of all node IDs that are impacted by any tracked
                      column changes
         """
-        return self._impacted_ids
+        return self._impacted_ids.copy()

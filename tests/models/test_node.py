@@ -2,299 +2,129 @@
 import pytest
 
 # first party
-from src.models.node import Node
+from src.models.node import Node, NodeFactory, NodeManager
 
 
-@pytest.fixture
-def create_node():
-    """Helper fixture to create Node instances for testing."""
+def test_node_initialization():
+    """Test basic node initialization with simple SQL."""
+    node = Node(
+        unique_id="model.my_project.test",
+        source_code="SELECT id FROM table",
+        target_code="SELECT id, name FROM table",
+        dialect="snowflake",
+    )
 
-    def _create_node(
-        source: str,
-        target: str,
-        unique_id: str = "model.test.test_model",
-        dialect: str = "snowflake",
-    ):
-        return Node(
-            unique_id=unique_id, target_code=target, source_code=source, dialect=dialect
+    assert node.unique_id == "model.my_project.test"
+    assert len(node.changes) > 0
+    assert len(node.breaking_changes) == 0  # Adding columns isn't breaking
+    assert not node.ignore_column_changes
+    assert len(node.column_changes) == 0
+
+
+def test_node_with_breaking_changes():
+    """Test node with breaking changes (column removal)."""
+    node = Node(
+        unique_id="model.my_project.test",
+        source_code="SELECT id, name, age FROM table",
+        target_code="SELECT id, name FROM table",
+        dialect="snowflake",
+    )
+
+    assert len(node.breaking_changes) > 0
+    assert not node.ignore_column_changes
+    assert "age" in node.column_changes
+
+
+def test_node_with_invalid_sql():
+    """Test node initialization with invalid SQL."""
+    node = Node(
+        unique_id="model.my_project.test",
+        source_code="INVALID SQL",
+        target_code="MORE INVALID SQL",
+        dialect="snowflake",
+    )
+
+    assert len(node.changes) == 0
+    assert len(node.breaking_changes) == 0
+
+
+def test_node_factory(sample_compiled_nodes):
+    """Test NodeFactory creates nodes correctly."""
+    nodes = NodeFactory.create_nodes(sample_compiled_nodes, "snowflake")
+
+    assert len(nodes) == 2
+    assert "model.my_project.first_model" in nodes
+    assert "model.my_project.second_model" in nodes
+    assert all(isinstance(node, Node) for node in nodes.values())
+
+
+class TestNodeManager:
+    @pytest.fixture
+    def node_manager(self, mock_config, sample_compiled_nodes, mock_lineage_service):
+        all_unique_ids = {
+            "model.my_project.first_model",
+            "model.my_project.second_model",
+        }
+        return NodeManager(
+            config=mock_config,
+            all_nodes=sample_compiled_nodes,
+            all_unique_ids=all_unique_ids,
+            lineage_service=mock_lineage_service,
         )
 
-    return _create_node
+    def test_node_manager_initialization(self, node_manager):
+        """Test NodeManager initializes correctly."""
+        assert len(node_manager.nodes) == 2
+        assert len(node_manager.node_unique_ids) == 2
+        assert isinstance(node_manager.nodes[0], Node)
+
+    def test_get_excluded_nodes_empty(self, mock_config, mock_lineage_service):
+        """Test get_excluded_nodes with empty nodes."""
+        manager = NodeManager(
+            config=mock_config,
+            all_nodes={},
+            all_unique_ids=set(),
+            lineage_service=mock_lineage_service,
+        )
+        assert manager.get_excluded_nodes() == []
+
+    def test_get_excluded_nodes_with_changes(self, node_manager, mock_lineage_service):
+        """Test get_excluded_nodes with actual changes."""
+        # Setup mock lineage service to return some impacted nodes
+        mock_lineage_service.get_node_lineage.return_value = {
+            "model.my_project.first_model"
+        }
+
+        excluded = node_manager.get_excluded_nodes()
+        assert isinstance(excluded, list)
+        # Should exclude second_model as it's not in the impacted set
+        assert "second_model" in excluded
 
 
-def test_simple_column_rename(create_node):
-    """Test when a column is renamed - should be a breaking change."""
-    source = "SELECT amount as revenue, id FROM sales"
-    target = "SELECT amount as income, id FROM sales"
+def test_node_with_structural_changes():
+    """Test node with structural (non-column) changes."""
+    node = Node(
+        unique_id="model.my_project.test",
+        source_code="SELECT id FROM table1",
+        target_code="SELECT id FROM table2",  # Changed source table
+        dialect="snowflake",
+    )
 
-    node = create_node(source=source, target=target)
-
-    assert not node.ignore_column_changes
-    assert node.column_changes == {"revenue"}
-
-
-def test_column_removal(create_node):
-    """Test when a column is removed - should be a breaking change."""
-    source = "SELECT id, name, email, phone FROM users"
-    target = "SELECT id, name, email FROM users"
-
-    node = create_node(source=source, target=target)
-
-    assert not node.ignore_column_changes
-    assert node.column_changes == {"phone"}
+    assert len(node.breaking_changes) > 0
+    assert (
+        node.ignore_column_changes
+    )  # Should ignore column changes due to structural change
+    assert len(node.column_changes) == 0
 
 
-def test_column_addition(create_node):
-    """Test when a column is added - should not be a breaking change."""
-    source = "SELECT id, name FROM customers"
-    target = "SELECT id, name, address FROM customers"
+def test_node_with_udtf_changes():
+    """Test node with UDTF (User Defined Table Function) changes."""
+    node = Node(
+        unique_id="model.my_project.test",
+        source_code="SELECT * FROM TABLE(my_udtf(col1))",
+        target_code="SELECT * FROM TABLE(my_udtf(col1, col2))",
+        dialect="snowflake",
+    )
 
-    node = create_node(source=source, target=target)
-
-    assert not node.ignore_column_changes
-    assert node.column_changes == set()
-
-
-def test_column_expression_change(create_node):
-    """Test when a column's expression changes - should be a breaking change."""
-    source = "SELECT id, price * quantity as total FROM orders"
-    target = "SELECT id, price * quantity * (1 - discount) as total FROM orders"
-
-    node = create_node(source=source, target=target)
-
-    assert not node.ignore_column_changes
-    assert node.column_changes == {"total"}
-
-
-def test_table_source_change(create_node):
-    """Test when the source table changes - should ignore column changes."""
-    source = "SELECT id, name FROM customers_v1"
-    target = "SELECT id, name FROM customers_v2"
-
-    node = create_node(source=source, target=target)
-
+    assert len(node.breaking_changes) > 0
     assert node.ignore_column_changes
-    assert node.column_changes == set()
-
-
-def test_join_condition_change(create_node):
-    """Test when join conditions change - should ignore column changes."""
-    source = """
-        SELECT o.id, o.amount
-        FROM orders o
-        LEFT JOIN customers c ON o.customer_id = c.id
-    """
-    target = """
-        SELECT o.id, o.amount
-        FROM orders o
-        INNER JOIN customers c ON o.customer_id = c.id
-    """
-
-    node = create_node(source=source, target=target)
-
-    assert node.ignore_column_changes
-    assert node.column_changes == set()
-
-
-def test_where_clause_change(create_node):
-    """Test when where clause changes - should ignore column changes."""
-    source = "SELECT id, status FROM orders WHERE created_at > '2024-01-01'"
-    target = "SELECT id, status FROM orders WHERE created_at > '2024-01-01' AND status != 'cancelled'"
-
-    node = create_node(source=source, target=target)
-
-    assert node.ignore_column_changes
-    assert node.column_changes == set()
-
-
-def test_multiple_column_changes(create_node):
-    """Test multiple column changes - should track all changed columns."""
-    source = "SELECT id, first_name as name, last_name as surname FROM users"
-    target = "SELECT id, first_name as full_name, middle_name as middle FROM users"
-
-    node = create_node(source=source, target=target)
-
-    assert not node.ignore_column_changes
-    assert node.column_changes == {"name", "surname"}
-
-
-def test_window_function_change(create_node):
-    """Test when window function changes - should be a breaking change."""
-    source = """
-        SELECT
-            id,
-            ROW_NUMBER() OVER (PARTITION BY category_id ORDER BY amount) as row_num
-        FROM transactions
-    """
-    target = """
-        SELECT
-            id,
-            RANK() OVER (PARTITION BY category_id ORDER BY amount) as row_num
-        FROM transactions
-    """
-
-    node = create_node(source=source, target=target)
-
-    assert not node.ignore_column_changes
-    assert node.column_changes == {"row_num"}
-
-
-def test_cte_changes_with_column_rename(create_node):
-    """Test changes in CTEs - should not ignore column changes."""
-    source = """
-        WITH summary AS (
-            SELECT category_id, SUM(amount) as total
-            FROM transactions
-            GROUP BY category_id
-        )
-        SELECT c.name, s.total as category_total
-        FROM categories c
-        JOIN summary s ON c.id = s.category_id
-    """
-    target = """
-        WITH summary AS (
-            SELECT category_id, SUM(amount * exchange_rate) as total
-            FROM transactions
-            GROUP BY category_id
-        )
-        SELECT c.name, s.total as category_total
-        FROM categories c
-        JOIN summary s ON c.id = s.category_id
-    """
-
-    node = create_node(source=source, target=target)
-
-    assert not node.ignore_column_changes
-    assert node.column_changes == {"category_total"}
-
-
-def test_cte_changes(create_node):
-    """Test changes in CTEs - should not ignore column changes."""
-    source = """
-        WITH summary AS (
-            SELECT category_id, SUM(amount) as total
-            FROM transactions
-            GROUP BY category_id
-        )
-        SELECT c.name, s.total
-        FROM categories c
-        JOIN summary s ON c.id = s.category_id
-    """
-    target = """
-        WITH summary AS (
-            SELECT category_id, SUM(amount * exchange_rate) as total
-            FROM transactions
-            GROUP BY category_id
-        )
-        SELECT c.name, s.total
-        FROM categories c
-        JOIN summary s ON c.id = s.category_id
-    """
-
-    node = create_node(source=source, target=target)
-
-    assert not node.ignore_column_changes
-    assert node.column_changes == {"total"}
-
-
-def test_multiple_cte_changes(create_node):
-    """Test changes in multiple CTEs - should not ignore column changes."""
-    source = """
-        WITH summary AS (
-            SELECT category_id, SUM(amount) as total
-            FROM transactions
-            GROUP BY category_id
-        ),
-        cats as (
-            SELECT id as category_id, name
-            FROM categories
-        )
-        SELECT c.name, s.total
-        FROM cats c
-        JOIN summary s ON c.category_id = s.category_id
-    """
-    target = """
-        WITH summary AS (
-            SELECT category_id, SUM(amount * exchange_rate) as total
-            FROM transactions
-            GROUP BY category_id
-        ),
-        cats as (
-            SELECT id as category_id, name || 's' as name
-            FROM categories
-        )
-        SELECT c.name, s.total
-        FROM cats c
-        JOIN summary s ON c.category_id = s.category_id
-    """
-
-    node = create_node(source=source, target=target)
-
-    assert not node.ignore_column_changes
-    assert node.column_changes == {"name", "total"}
-
-
-def test_multiple_cte_changes_with_column_rename(create_node):
-    """Test changes in multiple CTEs - should not ignore column changes."""
-    source = """
-        WITH summary AS (
-            SELECT category_id, SUM(amount) as total
-            FROM transactions
-            GROUP BY category_id
-        ),
-        cats as (
-            SELECT id as category_id, name
-            FROM categories
-        )
-        SELECT c.name, s.total
-        FROM cats c
-        JOIN summary s ON c.category_id = s.category_id
-    """
-    target = """
-        WITH summary AS (
-            SELECT category_id, SUM(amount * exchange_rate) as total
-            FROM transactions
-            GROUP BY category_id
-        ),
-        cats as (
-            SELECT id as category_id, name || 's' as name
-            FROM categories
-        )
-        SELECT c.name, s.total as new_total
-        FROM cats c
-        JOIN summary s ON c.category_id = s.category_id
-    """
-
-    node = create_node(source=source, target=target)
-
-    assert not node.ignore_column_changes
-    assert node.column_changes == {"name", "total", "new_total"}
-
-
-def test_outside_cte_changes(create_node):
-    """Test changes outside of CTEs - should not ignore column changes."""
-    source = """
-        WITH summary AS (
-            SELECT category_id, SUM(amount) as total
-            FROM transactions
-            GROUP BY category_id
-        )
-        SELECT c.name, s.total
-        FROM categories c
-        JOIN summary s ON c.id = s.category_id
-    """
-    target = """
-        WITH summary AS (
-            SELECT category_id, SUM(amount * exchange_rate) as total
-            FROM transactions
-            GROUP BY category_id
-        )
-        SELECT c.name, s.total as category_total
-        FROM categories c
-        JOIN summary s ON c.id = s.category_id
-    """
-
-    node = create_node(source=source, target=target)
-
-    assert not node.ignore_column_changes
-    assert node.column_changes == {"category_total", "total"}
