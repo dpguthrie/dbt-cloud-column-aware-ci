@@ -8,7 +8,12 @@ from src.config import Config
 from src.interfaces.orchestrator import OrchestratorProtocol
 from src.models.node import NodeManager
 from src.services.dbt_runner import DbtRunner
-from src.utils import JobRunStatus, create_dbt_cloud_profile, trigger_job
+from src.utils import (
+    JobRunStatus,
+    create_dbt_cloud_profile,
+    post_dry_run_message,
+    trigger_job,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -124,18 +129,7 @@ class CiOrchestrator(OrchestratorProtocol):
             bool: True if the job completed successfully (or if dry_run), False otherwise
         """
         if self.config.dry_run:
-            dry_run_message = (
-                "--------------- DRY RUN MODE ---------------\n"
-                "Dry run mode is enabled and a dbt Cloud job will not be triggered.\n"
-                "The total number of models that would've been excluded from the build "
-                f"are: {len(excluded_nodes or [])}"
-                "\n"
-                "Models that would've been excluded from the build are listed below:\n"
-                + "\n".join([f" - {node}" for node in sorted(excluded_nodes or [])])
-                + "\n"
-                "--------------------------------------------"
-            )
-            logger.info(dry_run_message)
+            post_dry_run_message(excluded_nodes)
             return True
 
         run = trigger_job(self.config, excluded_nodes=excluded_nodes)

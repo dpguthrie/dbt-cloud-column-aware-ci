@@ -39,17 +39,28 @@ This results in faster CI runs and more efficient use of warehouse resources.
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `dbt_cloud_service_token` | dbt Cloud Service Token | Yes | - |
-| `dbt_cloud_token_value` | dbt Cloud Personal API Key for use with the dbt Cloud CLI | Yes | - |
-| `dbt_cloud_token_name` | Name of the personal API Key created in dbt Cloud | Yes | - |
 | `dbt_cloud_account_id` | dbt Cloud Account ID | Yes | - |
+| `dbt_cloud_job_id` | dbt Cloud CI Job ID for the current project | Yes | - |
 | `dbt_cloud_project_id` | dbt Cloud Project ID | Yes | - |
 | `dbt_cloud_project_name` | dbt Cloud Project Name | Yes | - |
-| `dbt_cloud_job_id` | dbt Cloud CI Job ID for the current project | Yes | - |
-| `dbt_cloud_host` | dbt Cloud host | No | cloud.getdbt.com |
-| `dbt_cloud_environment_id` | dbt Cloud Environment ID for job deferral | No | Inferred from job |
+| `dbt_cloud_service_token` | dbt Cloud Service Token | Yes | - |
+| `dbt_cloud_token_name` | Name of the personal API Key created in dbt Cloud | Yes | - |
+| `dbt_cloud_token_value` | dbt Cloud Personal API Key for use with the dbt Cloud CLI | Yes | - |
 | `dialect` | SQL dialect of your warehouse (e.g., 'snowflake') | Yes | - |
+| `dbt_cloud_environment_id` | dbt Cloud Environment ID for job deferral | No | Inferred from job |
+| `dbt_cloud_host` | dbt Cloud host | No | cloud.getdbt.com |
+| `github_token` | GitHub token for API authentication | No | ${{ github.token }} |
 | `log_level` | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) | No | INFO |
+
+The dialect refers to your data platform where your dbt project is being executed.  Valid dialects include:
+- athena
+- bigquery
+- databricks
+- postgres
+- redshift
+- snowflake
+- spark
+- trino
 
 ## Usage
 

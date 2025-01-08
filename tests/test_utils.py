@@ -1,8 +1,12 @@
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
-
-from src.utils import JobRunStatus, create_dbt_cloud_profile, trigger_job
+from src.utils import (
+    JobRunStatus,
+    create_dbt_cloud_profile,
+    post_dry_run_message,
+    trigger_job,
+)
 
 
 def test_job_run_status_enum():
@@ -106,3 +110,68 @@ def test_trigger_job_invalid_pr_ref(mock_config):
 
     payload = mock_trigger.call_args[0][2]
     assert payload["github_pull_request_id"] is None
+
+
+@patch("requests.post")
+@patch.dict(
+    "os.environ",
+    {
+        "INPUT_GITHUB_TOKEN": "fake-token",
+        "GITHUB_REPOSITORY": "org/repo",
+        "GITHUB_REF": "refs/pull/123/merge",
+    },
+)
+def test_post_dry_run_message_success(mock_post):
+    """Test posting dry run message with successful GitHub API call."""
+    # Setup mock response
+    mock_post.return_value.ok = True
+
+    excluded_nodes = ["excluded1", "excluded2"]
+    post_dry_run_message(excluded_nodes)
+
+    # Verify the API call
+    mock_post.assert_called_once()
+    call_args = mock_post.call_args
+
+    # Check URL
+    assert (
+        call_args[0][0] == "https://api.github.com/repos/org/repo/issues/123/comments"
+    )
+
+    # Check headers
+    assert call_args[1]["headers"] == {
+        "Authorization": "Bearer fake-token",
+        "Accept": "application/vnd.github.v3+json",
+    }
+
+    # Check message content
+    message = call_args[1]["json"]["body"]
+    assert "Column-aware CI Results (dry run)" in message
+    assert "number of models that would've been excluded" in message
+    assert "excluded1" in message
+    assert "excluded2" in message
+    assert "2" in message  # Number of excluded models
+
+
+@patch("requests.post")
+@patch.dict(
+    "os.environ",
+    {
+        "GITHUB_REPOSITORY": "org/repo",
+        "GITHUB_REF": "refs/pull/123/merge",
+        # Intentionally missing GITHUB_TOKEN
+    },
+)
+def test_post_dry_run_message_missing_env_vars(mock_post, caplog):
+    """Test posting dry run message with missing environment variables."""
+    excluded_nodes = ["excluded1"]
+    post_dry_run_message(excluded_nodes)
+
+    # Verify no API call was made
+    mock_post.assert_not_called()
+
+    # Verify log message
+    assert (
+        "Missing required environment variables for GitHub comment: token"
+        in caplog.text
+    )

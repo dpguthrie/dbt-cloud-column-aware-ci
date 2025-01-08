@@ -172,7 +172,7 @@ def test_trigger_and_check_job_dry_run_no_nodes(orchestrator, mock_config, caplo
     result = orchestrator.trigger_and_check_job()
 
     assert result is True
-    assert "DRY RUN MODE" in caplog.text
+    assert "## Column-aware CI Results (dry run)" in caplog.text
     assert (
         "Models that would've been excluded from the build are listed below:"
         in caplog.text
@@ -190,7 +190,7 @@ def test_trigger_and_check_job_dry_run_with_nodes(orchestrator, mock_config, cap
     result = orchestrator.trigger_and_check_job(excluded_nodes=excluded_nodes)
 
     assert result is True
-    assert "DRY RUN MODE" in caplog.text
+    assert "## Column-aware CI Results (dry run)" in caplog.text
     assert "2" in caplog.text
     assert "node1" in caplog.text
     assert "node2" in caplog.text
