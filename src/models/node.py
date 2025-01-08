@@ -9,12 +9,13 @@ from typing import TYPE_CHECKING, Dict, Optional, Set
 # third party
 from sqlglot import diff, exp, parse_one
 from sqlglot.diff import Insert
+from sqlglot.parser import ParseError
 
 # first party
 from src.config import Config
 from src.models.breaking_change import BreakingChange
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from src.models.node_factory import NodeFactory
     from src.services.lineage_service import LineageService
 
@@ -48,16 +49,19 @@ class Node:
         Parses both versions of the SQL code and identifies breaking changes
         between them.
         """
-        self._source_exp = parse_one(self.source_code, dialect=self.dialect)
-        self._target_exp = parse_one(self.target_code, dialect=self.dialect)
         try:
-            self.changes = diff(self._source_exp, self._target_exp, delta_only=True)
-        except Exception as e:
+            self._source_exp = parse_one(self.source_code, dialect=self.dialect)
+            self._target_exp = parse_one(self.target_code, dialect=self.dialect)
+        except ParseError as e:
             logger.error(
-                f"There was a problem creating a diff for `{self.unique_id}`.\n"
-                f"Error: {e}\n\nSource: {self.source_code}\nTarget: {self.target_code}"
+                f"There was a problem parsing the source code or target code for "
+                f"`{self.unique_id}`.\nError: {e}\n\nSource:\n{self.source_code}\n"
+                f"Target:\n{self.target_code}"
             )
             self.changes = []
+
+        else:
+            self.changes = diff(self._source_exp, self._target_exp, delta_only=True)
 
         # All breaking changes from diff
         self.breaking_changes = self._get_breaking_changes()
@@ -84,16 +88,30 @@ class Node:
         Returns:
             list[BreakingChange]: List of breaking changes found
         """
+
+        def _is_projection(expr: exp.Expression) -> bool:
+            parent = expr.parent
+            return isinstance(parent, exp.Select) and expr.arg_key == "expressions"
+
         breaking_changes: list[BreakingChange] = []
         inserts = {e.expression for e in self.changes if isinstance(e, Insert)}
 
         for edit in self.changes:
             if not isinstance(edit, Insert):
                 breaking_changes.append(BreakingChange(edit))
-            elif isinstance(edit.expression, exp.UDTF) or (
-                not isinstance(edit.expression.parent, exp.Select)
-                and edit.expression.parent not in inserts
-            ):
+                continue
+
+            expr = edit.expression
+            if isinstance(expr, exp.UDTF):
+                parent = expr.find_ancestor(exp.Subquery)
+
+                if not parent:
+                    breaking_changes.append(BreakingChange(edit))
+                    continue
+
+                expr = parent
+
+            if not _is_projection(expr) and expr.parent not in inserts:
                 breaking_changes.append(BreakingChange(edit))
 
         return breaking_changes
