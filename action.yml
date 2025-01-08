@@ -44,8 +44,10 @@ inputs:
     description: "If true, will compile and analyze changes but won't trigger the dbt Cloud job"
     required: false
     default: false
+  github_token:
+    description: "GitHub token for API authentication"
+    required: true
+    default: ${{ github.token }}
 runs:
   using: "docker"
   image: "Dockerfile"
-  env:
-    GITHUB_TOKEN: ${{ github.token }}
