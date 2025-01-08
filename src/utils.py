@@ -133,7 +133,7 @@ def post_dry_run_message(excluded_nodes: list[str]) -> None:
     logger.info(dry_run_message)
 
     required_env_vars = {
-        "token": os.getenv("GITHUB_TOKEN", None),
+        "token": os.getenv("INPUT_GITHUB_TOKEN", None),
         "repository": os.getenv("GITHUB_REPOSITORY", None),
         "pull_request_id": extract_pr_number(os.getenv("GITHUB_REF", "")),
     }
