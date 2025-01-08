@@ -46,7 +46,7 @@ inputs:
     default: false
   github_token:
     description: "GitHub token for API authentication"
-    required: true
+    required: false
     default: ${{ github.token }}
 runs:
   using: "docker"

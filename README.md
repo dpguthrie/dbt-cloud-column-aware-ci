@@ -47,9 +47,9 @@ This results in faster CI runs and more efficient use of warehouse resources.
 | `dbt_cloud_token_name` | Name of the personal API Key created in dbt Cloud | Yes | - |
 | `dbt_cloud_token_value` | dbt Cloud Personal API Key for use with the dbt Cloud CLI | Yes | - |
 | `dialect` | SQL dialect of your warehouse (e.g., 'snowflake') | Yes | - |
-| `github_token` | GitHub token for API authentication | Yes | ${{ github.token }} |
 | `dbt_cloud_environment_id` | dbt Cloud Environment ID for job deferral | No | Inferred from job |
 | `dbt_cloud_host` | dbt Cloud host | No | cloud.getdbt.com |
+| `github_token` | GitHub token for API authentication | No | ${{ github.token }} |
 | `log_level` | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) | No | INFO |
 
 The dialect refers to your data platform where your dbt project is being executed.  Valid dialects include:
