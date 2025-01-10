@@ -17,12 +17,6 @@ inputs:
   dbt_cloud_account_id:
     description: dbt Cloud Account ID
     required: true
-  dbt_cloud_project_id:
-    description: dbt Cloud Project ID
-    required: true
-  dbt_cloud_project_name:
-    description: dbt Cloud Project Name
-    required: true
   dbt_cloud_job_id:
     description: dbt Cloud CI Job ID for the current project
     required: true
@@ -30,16 +24,13 @@ inputs:
     description: dbt Cloud host
     required: false
     default: "cloud.getdbt.com"
-  dbt_cloud_environment_id:
-    description: dbt Cloud Environment ID (this is the environment that the CI job defers to).  If not given, it will be inferred from the CI job.
-    required: false
+  dialect:
+    description: "SQL dialect used in the dbt project (e.g., 'snowflake', 'bigquery', 'redshift')"
+    required: true
   log_level:
     description: "Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
     required: false
     default: "INFO"
-  dialect:
-    description: "SQL dialect used in the dbt project (e.g., 'snowflake', 'bigquery', 'redshift')"
-    required: true
   dry_run:
     description: "If true, will compile and analyze changes but won't trigger the dbt Cloud job"
     required: false

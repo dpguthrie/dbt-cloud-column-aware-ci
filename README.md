@@ -41,13 +41,10 @@ This results in faster CI runs and more efficient use of warehouse resources.
 |-------|-------------|----------|---------|
 | `dbt_cloud_account_id` | dbt Cloud Account ID | Yes | - |
 | `dbt_cloud_job_id` | dbt Cloud CI Job ID for the current project | Yes | - |
-| `dbt_cloud_project_id` | dbt Cloud Project ID | Yes | - |
-| `dbt_cloud_project_name` | dbt Cloud Project Name | Yes | - |
 | `dbt_cloud_service_token` | dbt Cloud Service Token | Yes | - |
 | `dbt_cloud_token_name` | Name of the personal API Key created in dbt Cloud | Yes | - |
 | `dbt_cloud_token_value` | dbt Cloud Personal API Key for use with the dbt Cloud CLI | Yes | - |
 | `dialect` | SQL dialect of your warehouse (e.g., 'snowflake') | Yes | - |
-| `dbt_cloud_environment_id` | dbt Cloud Environment ID for job deferral | No | Inferred from job |
 | `dbt_cloud_host` | dbt Cloud host | No | cloud.getdbt.com |
 | `dry_run` | When true, analyzes changes but doesn't trigger dbt Cloud job | No | false |
 | `github_token` | GitHub token for API authentication | No | ${{ github.token }} |
@@ -79,16 +76,13 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Run Column-Aware dbt Cloud CI
-      uses: dpguthrie/dbt-cloud-column-aware-ci@0.4.1
+      uses: dpguthrie/dbt-cloud-column-aware-ci@0.4.2
       with:
         dbt_cloud_service_token: ${{ secrets.DBT_CLOUD_SERVICE_TOKEN }}
         dbt_cloud_token_name: 'github-actions'
         dbt_cloud_token_value: ${{ secrets.DBT_CLOUD_TOKEN_VALUE }}
         dbt_cloud_account_id: '12345'
-        dbt_cloud_project_id: '67890'
-        dbt_cloud_project_name: 'my-dbt-project'
         dbt_cloud_job_id: '98765'
-        dbt_cloud_environment_id: '238221'
         dialect: 'snowflake'
         log_level: 'DEBUG' # optional
 ```

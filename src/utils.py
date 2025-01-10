@@ -24,6 +24,9 @@ class JobRunStatus(enum.IntEnum):
     CANCELLED = 30
 
 
+VALID_EXCLUSION_COMMANDS = ("dbt build", "dbt run", "dbt test")
+
+
 def create_dbt_cloud_profile(config: Config) -> None:
     """Create dbt Cloud profile for authentication."""
     logger.debug("Creating dbt Cloud profile")
@@ -58,6 +61,29 @@ def create_dbt_cloud_profile(config: Config) -> None:
 
 
 def trigger_job(config: Config, *, excluded_nodes: list[str] = None) -> dict:
+    def modify_execute_steps(
+        execute_steps: list[str], excluded_nodes: list[str]
+    ) -> list[str]:
+        """Modify the execute steps to include node exclusions."""
+        excluded_nodes_str = " ".join(excluded_nodes)
+        new_steps = []
+        for step in execute_steps:
+            if step.startswith(VALID_EXCLUSION_COMMANDS):
+                # Check if step already has exclusions
+                if "--exclude" in step:
+                    # Split the step into command and existing exclusions
+                    command_parts = step.split("--exclude")
+                    base_command = command_parts[0].strip()
+                    existing_exclusions = command_parts[1].strip()
+                    # Combine existing and new exclusions
+                    all_exclusions = f"{existing_exclusions} {excluded_nodes_str}"
+                    new_steps.append(f"{base_command} --exclude {all_exclusions}")
+                else:
+                    new_steps.append(f"{step} --exclude {excluded_nodes_str}")
+            else:
+                new_steps.append(step)
+        return new_steps
+
     """Trigger a dbt Cloud job with optional node exclusions."""
     logger.debug(
         "Preparing to trigger dbt Cloud job",
@@ -89,11 +115,9 @@ def trigger_job(config: Config, *, excluded_nodes: list[str] = None) -> dict:
     }
 
     if excluded_nodes:
-        excluded_nodes_str = " ".join(excluded_nodes)
-        steps_override = [
-            f"dbt build -s state:modified+ --exclude {excluded_nodes_str}"
-        ]
-        payload["steps_override"] = steps_override
+        payload["steps_override"] = modify_execute_steps(
+            config.execute_steps, excluded_nodes
+        )
         logger.info(
             "Adding node exclusions to job",
             extra={"excluded_count": len(excluded_nodes)},
