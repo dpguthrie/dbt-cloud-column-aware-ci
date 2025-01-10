@@ -14,25 +14,28 @@ class Config:
     # All fields are required and populated from INPUT_DBT_CLOUD_* environment variables
     dbt_cloud_host: str
     dbt_cloud_service_token: str
-    dbt_cloud_project_id: str
-    dbt_cloud_project_name: str
     dbt_cloud_token_name: str
     dbt_cloud_token_value: str
-    dbt_cloud_account_id: str
-    dbt_cloud_job_id: str
+    dbt_cloud_account_id: int
+    dbt_cloud_job_id: int
     dialect: str
-    dbt_cloud_environment_id: str = field(default=None)
+
+    # Optional fields
     dry_run: bool = field(default=False)
-    dbtc_client: dbtCloudClient = field(
-        init=False
-    )  # This is set in post_init, so we'll keep it as a field
+
+    # Set in post_init, used to find fields below
+    dbtc_client: dbtCloudClient = field(init=False)
+    # Found from dbtc_client.cloud.get_job
+    dbt_cloud_project_id: int = field(default=None)
+    dbt_cloud_project_name: int = field(default=None)
+    dbt_cloud_environment_id: int = field(default=None)
+    execute_steps: list[str] = field(init=False, default_factory=list)
 
     def __post_init__(self):
         self.dbtc_client = dbtCloudClient(
             service_token=self.dbt_cloud_service_token, host=self.dbt_cloud_host
         )
-        if self.dbt_cloud_environment_id is None:
-            self._set_deferring_environment_id()
+        self._set_fields_from_dbtc_client()
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -63,8 +66,6 @@ class Config:
         required_vars = [
             "dbt_cloud_host",
             "dbt_cloud_service_token",
-            "dbt_cloud_project_id",
-            "dbt_cloud_project_name",
             "dbt_cloud_token_name",
             "dbt_cloud_token_value",
             "dbt_cloud_account_id",
@@ -83,19 +84,25 @@ class Config:
 
         return cls(**env_vars)
 
-    def _set_deferring_environment_id(self) -> None:
+    def _set_fields_from_dbtc_client(self) -> None:
         try:
             ci_job = self.dbtc_client.cloud.get_job(
-                self.dbt_cloud_account_id, self.dbt_cloud_job_id
+                self.dbt_cloud_account_id,
+                self.dbt_cloud_job_id,
+                include_related=["project"],
             )
         except Exception as e:
             raise Exception(
                 "An error occurred making a request to dbt Cloud." f"See error: {e}"
             )
         try:
-            self.dbt_cloud_environment_id = ci_job["data"]["deferring_environment_id"]
+            job_data = ci_job["data"]
+            self.dbt_cloud_environment_id = job_data["deferring_environment_id"]
+            self.dbt_cloud_project_id = job_data["project"]["id"]
+            self.dbt_cloud_project_name = job_data["project"]["name"]
+            self.execute_steps = job_data["execute_steps"]
         except Exception as e:
             raise Exception(
-                "An error occurred retrieving your job's deferring environment ID. "
+                "An error occurred retrieving your job's data. "
                 f"Response from API:\n{ci_job}.\nError:\n{e}"
             )
