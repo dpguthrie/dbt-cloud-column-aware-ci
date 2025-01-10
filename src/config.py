@@ -93,7 +93,7 @@ class Config:
             )
         except Exception as e:
             raise Exception(
-                "An error occurred making a request to dbt Cloud." f"See error: {e}"
+                f"An error occurred making a request to dbt Cloud. See error: {e}"
             )
         try:
             job_data = ci_job["data"]
