@@ -39,8 +39,8 @@ def test_create_dbt_cloud_profile(
 
     # Your assertions
     assert config_dict["version"] == 1
-    assert config_dict["context"]["active-project"] == "270542"
-    assert config_dict["projects"][0]["project-id"] == "270542"
+    assert config_dict["context"]["active-project"] == 270542
+    assert config_dict["projects"][0]["project-id"] == 270542
     assert (
         config_dict["projects"][0]["token-value"] == mock_config.dbt_cloud_token_value
     )
@@ -175,3 +175,75 @@ def test_post_dry_run_message_missing_env_vars(mock_post, caplog):
         "Missing required environment variables for GitHub comment: token"
         in caplog.text
     )
+
+
+@patch.dict(
+    "os.environ",
+    {"GITHUB_HEAD_REF": "feature/test-branch", "GITHUB_REF": "refs/pull/123/merge"},
+)
+def test_trigger_job_mixed_execute_steps(mock_config):
+    """Test triggering job with mixed execute steps (some eligible for exclusions, some not)."""
+    excluded_nodes = ["model.test.excluded1", "model.test.excluded2"]
+
+    # Set up mixed execute steps in the mock config
+    mock_config.execute_steps = [
+        "dbt deps",  # Not eligible for exclusions
+        "dbt build -s state:modified+",  # Should get exclusions
+        "dbt test -s source:*",  # Should get exclusions
+        "dbt docs generate",  # Not eligible for exclusions
+        "dbt run --select tag:daily",  # Should get exclusions
+    ]
+
+    # Create a Mock for trigger_job
+    mock_trigger = mock_config.dbtc_client.cloud.trigger_job = MagicMock()
+    mock_trigger.return_value = {}
+
+    trigger_job(mock_config, excluded_nodes=excluded_nodes)
+
+    mock_trigger.assert_called_once()
+    payload = mock_trigger.call_args[0][2]
+
+    # Verify the steps were modified correctly
+    expected_steps = [
+        "dbt deps",  # Unchanged
+        "dbt build -s state:modified+ --exclude model.test.excluded1 model.test.excluded2",
+        "dbt test -s source:* --exclude model.test.excluded1 model.test.excluded2",
+        "dbt docs generate",  # Unchanged
+        "dbt run --select tag:daily --exclude model.test.excluded1 model.test.excluded2",
+    ]
+    assert payload["steps_override"] == expected_steps
+
+
+@patch.dict(
+    "os.environ",
+    {"GITHUB_HEAD_REF": "feature/test-branch", "GITHUB_REF": "refs/pull/123/merge"},
+)
+def test_trigger_job_with_existing_exclusions(mock_config):
+    """Test triggering job with steps that already have exclusions."""
+    excluded_nodes = ["model.test.new_exclude1", "model.test.new_exclude2"]
+
+    # Set up execute steps that already have exclusions
+    mock_config.execute_steps = [
+        "dbt deps",  # Not eligible for exclusions
+        "dbt build -s state:modified+ --exclude model.test.existing1",  # Has existing exclusion
+        "dbt test --exclude model.test.existing2 model.test.existing3",  # Has multiple existing exclusions
+        "dbt run",  # No existing exclusions
+    ]
+
+    # Create a Mock for trigger_job
+    mock_trigger = mock_config.dbtc_client.cloud.trigger_job = MagicMock()
+    mock_trigger.return_value = {}
+
+    trigger_job(mock_config, excluded_nodes=excluded_nodes)
+
+    mock_trigger.assert_called_once()
+    payload = mock_trigger.call_args[0][2]
+
+    # Verify the steps were modified correctly
+    expected_steps = [
+        "dbt deps",  # Unchanged
+        "dbt build -s state:modified+ --exclude model.test.existing1 model.test.new_exclude1 model.test.new_exclude2",
+        "dbt test --exclude model.test.existing2 model.test.existing3 model.test.new_exclude1 model.test.new_exclude2",
+        "dbt run --exclude model.test.new_exclude1 model.test.new_exclude2",
+    ]
+    assert payload["steps_override"] == expected_steps

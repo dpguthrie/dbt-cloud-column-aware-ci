@@ -1,7 +1,6 @@
 # stdlib
-import os
 from typing import Dict
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 # third party
 import pytest
@@ -16,18 +15,39 @@ from src.interfaces.lineage import LineageServiceProtocol
 @pytest.fixture
 def mock_config() -> Config:
     """Create a mock configuration object."""
-    return Config(
-        dbt_cloud_account_id="43786",
-        dbt_cloud_job_id="567183",
-        dbt_cloud_host="cloud.getdbt.com",
-        dbt_cloud_service_token=os.environ["DBT_CLOUD_SERVICE_TOKEN"],
-        dbt_cloud_project_id="270542",
-        dbt_cloud_project_name="Main",
-        dbt_cloud_token_name="cloud-cli-6d65",
-        dbt_cloud_token_value=os.environ["DBT_CLOUD_TOKEN_VALUE"],
-        dbt_cloud_environment_id="218762",
-        dialect="snowflake",
-    )
+    # Create a mock dbtc_client
+    mock_dbtc_client = MagicMock()
+    mock_dbtc_client.cloud.get_job.return_value = {
+        "data": {
+            "deferring_environment_id": 218762,
+            "project": {
+                "id": 270542,
+                "name": "Main",
+            },
+            "execute_steps": ["dbt build -s state:modified+"],
+        }
+    }
+
+    with patch("src.config.Config._set_fields_from_dbtc_client"):
+        config = Config(
+            dbt_cloud_account_id="43786",
+            dbt_cloud_job_id="567183",
+            dbt_cloud_host="cloud.getdbt.com",
+            dbt_cloud_service_token="dummy_service_token",
+            dbt_cloud_token_name="cloud-cli-6d65",
+            dbt_cloud_token_value="dummy_token_value",
+            dialect="snowflake",
+        )
+
+    config.dbtc_client = mock_dbtc_client
+
+    # Set the values that would have been set by _set_fields_from_dbtc_client
+    config.dbt_cloud_environment_id = 218762
+    config.dbt_cloud_project_id = 270542
+    config.dbt_cloud_project_name = "Main"
+    config.execute_steps = ["dbt build -s state:modified+"]
+
+    return config
 
 
 @pytest.fixture
