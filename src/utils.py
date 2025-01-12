@@ -24,9 +24,6 @@ class JobRunStatus(enum.IntEnum):
     CANCELLED = 30
 
 
-VALID_EXCLUSION_COMMANDS = ("dbt build", "dbt run", "dbt test")
-
-
 def create_dbt_cloud_profile(config: Config) -> None:
     """Create dbt Cloud profile for authentication."""
     logger.debug("Creating dbt Cloud profile")
@@ -60,6 +57,34 @@ def create_dbt_cloud_profile(config: Config) -> None:
     )
 
 
+def is_valid_command(command: str) -> bool:
+    dbt_flags = [
+        "--warn-error",
+        "--use-experimental-parser",
+        "--no-partial-parse",
+        "--fail-fast",
+    ]
+
+    dbt_commands = [
+        "run",
+        "test",
+        # "snapshot",
+        "source",
+        "compile",
+        "ls",
+        "list",
+        r"docs\s+generate",
+        "build",
+        "clone",
+    ]
+
+    valid_commands = r"\s*dbt\s+(({})\s+)*({})\s*.*".format(
+        "|".join(dbt_flags), "|".join(dbt_commands)
+    )
+
+    return re.match(valid_commands, command) is not None
+
+
 def trigger_job(config: Config, *, excluded_nodes: list[str] = None) -> dict:
     def modify_execute_steps(
         execute_steps: list[str], excluded_nodes: list[str]
@@ -68,18 +93,8 @@ def trigger_job(config: Config, *, excluded_nodes: list[str] = None) -> dict:
         excluded_nodes_str = " ".join(excluded_nodes)
         new_steps = []
         for step in execute_steps:
-            if step.startswith(VALID_EXCLUSION_COMMANDS):
-                # Check if step already has exclusions
-                if "--exclude" in step:
-                    # Split the step into command and existing exclusions
-                    command_parts = step.split("--exclude")
-                    base_command = command_parts[0].strip()
-                    existing_exclusions = command_parts[1].strip()
-                    # Combine existing and new exclusions
-                    all_exclusions = f"{existing_exclusions} {excluded_nodes_str}"
-                    new_steps.append(f"{base_command} --exclude {all_exclusions}")
-                else:
-                    new_steps.append(f"{step} --exclude {excluded_nodes_str}")
+            if is_valid_command(step):
+                new_steps.append(f"{step} --exclude {excluded_nodes_str}")
             else:
                 new_steps.append(step)
         return new_steps
