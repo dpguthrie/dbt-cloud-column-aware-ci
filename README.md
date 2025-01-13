@@ -91,7 +91,7 @@ jobs:
 
 To get the most out of column-aware CI, it's recommended to set up your dbt Cloud environment as follows:
 
-1. Create a merge job in your production environment that runs when PRs are merged to your main branch
+1. Create a merge job in your environment that the CI job defers to.  This will run when PRs are merged to your configured branch.
 2. Configure the merge job to run at minimum:
    ```bash
    dbt docs generate
@@ -101,7 +101,7 @@ To get the most out of column-aware CI, it's recommended to set up your dbt Clou
    - Generates an updated `manifest.json` file
    - Ensures accurate state comparison for subsequent CI runs using `state:modified`
 
-The merge job keeps your production environment's state current, which enables this action to accurately determine which models need to be rebuilt based on column-level changes.
+The merge job keeps your deferred environment's state current, which enables this action to accurately determine which models need to be rebuilt based on column-level changes.
 
 ## How It Works
 
