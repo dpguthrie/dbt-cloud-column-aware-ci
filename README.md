@@ -76,7 +76,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Run Column-Aware dbt Cloud CI
-      uses: dpguthrie/dbt-cloud-column-aware-ci@0.5.0
+      uses: dpguthrie/dbt-cloud-column-aware-ci@0.5.1
       with:
         dbt_cloud_service_token: ${{ secrets.DBT_CLOUD_SERVICE_TOKEN }}
         dbt_cloud_token_name: 'github-actions'
