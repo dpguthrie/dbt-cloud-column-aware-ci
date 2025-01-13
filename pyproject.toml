@@ -1,6 +1,6 @@
 [project]
 name = "dbt-cloud-column-aware-ci"
-version = "0.1.0"
+version = "0.5.1"
 description = "A tool for running dbt Cloud CI jobs with column-level change awareness to optimize cost and performance during Continuous Integration."
 requires-python = ">=3.9"
 dependencies = [
