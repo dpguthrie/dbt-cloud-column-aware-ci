@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, mock_open, patch
 from src.utils import (
     JobRunStatus,
     create_dbt_cloud_profile,
+    is_valid_command,
     post_dry_run_message,
     trigger_job,
 )
@@ -190,8 +191,9 @@ def test_trigger_job_mixed_execute_steps(mock_config):
         "dbt deps",  # Not eligible for exclusions
         "dbt build -s state:modified+",  # Should get exclusions
         "dbt test -s source:*",  # Should get exclusions
-        "dbt docs generate",  # Not eligible for exclusions
+        "dbt docs generate",  # Should get exclusions
         "dbt run --select tag:daily",  # Should get exclusions
+        "dbt seed",  # Not eligible for exclusions
     ]
 
     # Create a Mock for trigger_job
@@ -208,8 +210,9 @@ def test_trigger_job_mixed_execute_steps(mock_config):
         "dbt deps",  # Unchanged
         "dbt build -s state:modified+ --exclude model.test.excluded1 model.test.excluded2",
         "dbt test -s source:* --exclude model.test.excluded1 model.test.excluded2",
-        "dbt docs generate",  # Unchanged
+        "dbt docs generate --exclude model.test.excluded1 model.test.excluded2",
         "dbt run --select tag:daily --exclude model.test.excluded1 model.test.excluded2",
+        "dbt seed",  # Unchanged
     ]
     assert payload["steps_override"] == expected_steps
 
@@ -242,8 +245,34 @@ def test_trigger_job_with_existing_exclusions(mock_config):
     # Verify the steps were modified correctly
     expected_steps = [
         "dbt deps",  # Unchanged
-        "dbt build -s state:modified+ --exclude model.test.existing1 model.test.new_exclude1 model.test.new_exclude2",
-        "dbt test --exclude model.test.existing2 model.test.existing3 model.test.new_exclude1 model.test.new_exclude2",
+        "dbt build -s state:modified+ --exclude model.test.existing1 --exclude model.test.new_exclude1 model.test.new_exclude2",
+        "dbt test --exclude model.test.existing2 model.test.existing3 --exclude model.test.new_exclude1 model.test.new_exclude2",
         "dbt run --exclude model.test.new_exclude1 model.test.new_exclude2",
     ]
     assert payload["steps_override"] == expected_steps
+
+
+def test_is_valid_command():
+    """Test validation of dbt commands."""
+    # Valid commands
+    assert is_valid_command("dbt run")
+    assert is_valid_command("dbt test")
+    assert is_valid_command("dbt build")
+    assert is_valid_command("dbt docs generate")
+    assert is_valid_command("dbt source freshness")
+    assert is_valid_command("  dbt   run  ")  # Extra spaces
+
+    # Valid commands with flags
+    assert is_valid_command("dbt --warn-error run")
+    assert is_valid_command("dbt --fail-fast test")
+    assert is_valid_command("dbt --use-experimental-parser --no-partial-parse run")
+    assert is_valid_command(
+        "dbt run --select tag:daily"
+    )  # Additional arguments after command
+
+    # Invalid commands
+    assert not is_valid_command("dbt snapshot")  # Commented out in allowed commands
+    assert not is_valid_command("dbt invalid")
+    assert not is_valid_command("not-dbt run")
+    assert not is_valid_command("dbt")  # Missing command
+    assert not is_valid_command("")  # Empty string
