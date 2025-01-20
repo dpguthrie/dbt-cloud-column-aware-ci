@@ -10,13 +10,13 @@ logger = logging.getLogger(__name__)
 
 VALID_DIALECTS = (
     "athena",
-    "bigquery", 
+    "bigquery",
     "databricks",
     "postgres",
     "redshift",
     "snowflake",
     "spark",
-    "trino"
+    "trino",
 )
 
 

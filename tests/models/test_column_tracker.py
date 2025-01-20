@@ -39,7 +39,10 @@ def test_track_node_columns_new_columns(mock_lineage_service, mock_node):
         "model.my_project.downstream_model1",
         "model.my_project.downstream_model2",
     }
-    expected_tracked_columns = {"model.my_project.test_model.column1", "model.my_project.test_model.column2"}
+    expected_tracked_columns = {
+        "model.my_project.test_model.column1",
+        "model.my_project.test_model.column2",
+    }
 
     assert tracker._tracked_columns == expected_tracked_columns
     assert tracker._impacted_ids == expected_impacted_ids

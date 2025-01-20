@@ -4,6 +4,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from src.models.node import Node
     from src.config import Config
 
+
 class LineageServiceProtocol(Protocol):
     config: "Config"
 
