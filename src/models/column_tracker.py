@@ -30,6 +30,22 @@ class ColumnTracker:
     _tracked_columns: Set[str] = field(default_factory=set)
     _impacted_ids: Set[str] = field(default_factory=set)
 
+    def _column_name_for_dialect(self, column_name: str) -> str:
+        """
+        Get the column name for the current dialect.
+
+        Args:
+            column_name: The original column name
+
+        Returns:
+            str: The column name for the current dialect
+        """
+        if self._lineage_service.config.dialect == "snowflake":
+            return column_name.upper()
+
+        # TODO: Any other modifications?
+        return column_name
+
     def track_node_columns(self, node: "Node") -> Set[str]:
         """
         Track columns for a node and identify impacted downstream nodes.
@@ -56,7 +72,7 @@ class ColumnTracker:
                 )
                 impacted_ids.update(
                     self._lineage_service.get_column_lineage(
-                        node.unique_id, column_name
+                        node.unique_id, self._column_name_for_dialect(column_name)
                     )
                 )
                 self._tracked_columns.add(node_column)

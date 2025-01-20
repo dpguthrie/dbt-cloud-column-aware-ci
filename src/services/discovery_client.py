@@ -56,8 +56,7 @@ class DiscoveryClient(DiscoveryClientProtocol):
             variables = {
                 "environmentId": environment_id,
                 "nodeUniqueId": node_id,
-                # TODO: This is a hack because Snowflake uppercases everything
-                "filters": {"columnName": column_name.upper()},
+                "filters": {"columnName": column_name},
             }
 
             lineage = self.config.dbtc_client.metadata.query(
