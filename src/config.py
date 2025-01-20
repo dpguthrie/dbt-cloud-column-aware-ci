@@ -8,6 +8,17 @@ from dbtc import dbtCloudClient
 
 logger = logging.getLogger(__name__)
 
+VALID_DIALECTS = (
+    "athena",
+    "bigquery",
+    "databricks",
+    "postgres",
+    "redshift",
+    "snowflake",
+    "spark",
+    "trino",
+)
+
 
 @dataclass
 class Config:
@@ -57,7 +68,11 @@ class Config:
 
         dialect = os.getenv("INPUT_DIALECT", None)
         if dialect is not None:
-            env_vars["dialect"] = dialect
+            if dialect.lower() not in VALID_DIALECTS:
+                raise ValueError(
+                    f"Invalid dialect: {dialect}. Valid dialects are: {VALID_DIALECTS}"
+                )
+            env_vars["dialect"] = dialect.lower()
 
         dry_run = os.getenv("INPUT_DRY_RUN", "false").lower() == "true"
         env_vars["dry_run"] = dry_run
