@@ -131,3 +131,23 @@ def test_set_fields_from_dbtc_client_invalid_response(mock_config):
             mock_config._set_fields_from_dbtc_client()
 
     assert "An error occurred retrieving your job's data" in str(exc_info.value)
+
+
+def test_config_invalid_dialect():
+    """Test Config creation with an invalid dialect."""
+    env_vars = {
+        "INPUT_DBT_CLOUD_HOST": "cloud.getdbt.com",
+        "INPUT_DBT_CLOUD_SERVICE_TOKEN": "test_token",
+        "INPUT_DBT_CLOUD_TOKEN_NAME": "cloud-cli-6d65",
+        "INPUT_DBT_CLOUD_TOKEN_VALUE": "test_token_value",
+        "INPUT_DBT_CLOUD_ACCOUNT_ID": "43786",
+        "INPUT_DBT_CLOUD_JOB_ID": "567183",
+        "INPUT_DIALECT": "invalid_dialect",
+    }
+
+    with patch.dict("os.environ", env_vars, clear=True):
+        with pytest.raises(ValueError) as exc_info:
+            Config.from_env()
+
+        assert "Invalid dialect: invalid_dialect" in str(exc_info.value)
+        assert "Valid dialects are:" in str(exc_info.value)

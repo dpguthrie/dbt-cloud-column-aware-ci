@@ -77,9 +77,10 @@ def mock_dbt_runner() -> DbtRunnerProtocol:
 
 
 @pytest.fixture
-def mock_lineage_service() -> LineageServiceProtocol:
+def mock_lineage_service(mock_config: Config) -> LineageServiceProtocol:
     """Create a mock lineage service."""
     service = MagicMock(spec=LineageServiceProtocol)
+    service.config = mock_config
 
     # Setup default return values
     service.get_column_lineage.return_value = set()
