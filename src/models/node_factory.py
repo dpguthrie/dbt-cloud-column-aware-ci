@@ -1,6 +1,6 @@
 # stdlib
 import logging
-from typing import Dict, List
+from typing import Dict
 
 # first party
 from src.models.node import Node
@@ -48,21 +48,3 @@ class NodeFactory:
             },
         )
         return nodes
-
-    @staticmethod
-    def get_node_names(nodes: List[Node]) -> List[str]:
-        """
-        Extract node names from their unique IDs.
-
-        Args:
-            nodes: List of Node instances
-
-        Returns:
-            List[str]: List of node names extracted from their unique IDs
-        """
-        logger.debug("Extracting node names", extra={"node_count": len(nodes)})
-
-        names = [node.unique_id.split(".")[-1] for node in nodes]
-
-        logger.debug("Extracted node names", extra={"name_count": len(names)})
-        return names
